@@ -1,0 +1,6 @@
+.history/
+node_modules/
+.vscode/
+*.js
+*.js.map
+!website/js/bundle.js
