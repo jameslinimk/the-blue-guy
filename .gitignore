@@ -4,3 +4,5 @@ node_modules/
 *.js
 *.js.map
 !website/js/bundle.js
+ngrok.exe
+package-lock.json
