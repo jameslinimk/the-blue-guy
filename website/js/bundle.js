@@ -306,6 +306,7 @@ const game_1 = require("../game");
 const image_1 = require("../image");
 const sound_1 = require("../sound");
 const dungeonGenerator_1 = require("./game/dungeonGenerator");
+const map_1 = require("./game/map");
 const player_1 = require("./game/player");
 const roundManager_1 = require("./game/roundManager");
 const hud_1 = require("./hud");
@@ -315,24 +316,30 @@ function random(min, max) {
 }
 exports.random = random;
 class GameScene extends game_1.BaseScene {
+    /* ---------------------------------- Misc ---------------------------------- */
     player;
+    mouse;
+    /* --------------------------------- Bullets -------------------------------- */
     bullets;
     noAmmoSound;
     bulletId;
     lastShot;
+    /* --------------------------------- Enemies -------------------------------- */
     enemies;
     enemyId;
     rays;
     rayId;
     balls;
     ballId;
-    mouse;
+    /* --------------------------------- Crates --------------------------------- */
     crates;
     crateId;
     cratePickupSound;
+    /* -------------------------------- Managers -------------------------------- */
     roundManager;
     dungeonManager;
-    showMap;
+    map;
+    /* --------------------------------- Images --------------------------------- */
     healthImage;
     crateImage;
     frameImage;
@@ -341,10 +348,25 @@ class GameScene extends game_1.BaseScene {
     largeAmmoImage;
     shellsAmmoImage;
     rangedEnemyImage;
+    /* -------------------------------- Inventory ------------------------------- */
     showInventory;
     showInventoryX;
     showInventoryAnimation;
     hideInventoryAnimation;
+    /* --------------------------------- Pausing -------------------------------- */
+    _paused;
+    get paused() { return this._paused; }
+    set paused(paused) {
+        if (this._paused === paused)
+            return;
+        this._paused = paused;
+        if (paused) {
+            // this.pausedAt = performance.now()
+            return;
+        }
+    }
+    // TODO Make getTicks() pause when paused
+    pausedAt;
     constructor() {
         super();
         this.player = new player_1.Player(config_1.config.width / 2, config_1.config.height - 50, this);
@@ -365,7 +387,7 @@ class GameScene extends game_1.BaseScene {
         this.cratePickupSound = new sound_1.Sound("./sounds/pickupCoin.wav");
         this.roundManager = new roundManager_1.RoundManager(this);
         this.dungeonManager = new roundManager_1.DungeonManager(this);
-        this.showMap = false;
+        this.map = new map_1.Map(this);
         this.healthImage = new image_1.CustomImage("./images/health.png");
         this.crateImage = new image_1.CustomImage("./images/crate.png");
         this.frameImage = new image_1.CustomImage("./images/guns/frame.png");
@@ -390,14 +412,17 @@ class GameScene extends game_1.BaseScene {
         }, () => {
             this.showInventoryX = config_1.config.width - hud_1.margin;
         });
+        this._paused = false;
+        this.pausedAt = performance.now();
     }
     processInput(events, pressedKeys, dt) {
         this.player.processInput(events, pressedKeys, dt);
+        this.map.processInput(events);
         /* -------------------------------------------------------------------------- */
         /*                                   Events                                   */
         /* -------------------------------------------------------------------------- */
-        let shot = this.player.gun.holdable && pressedKeys.get("Mouse Left") && performance.now() >= this.lastShot + this.player.gun.shootDelay;
-        for (let event of events) {
+        let shot = !this.paused && this.player.gun.holdable && pressedKeys.get("Mouse Left") && this.getTicks() >= this.lastShot + this.player.gun.shootDelay;
+        events.forEach(event => {
             switch (event.eventType) {
                 case "MouseMove":
                     event = event;
@@ -406,8 +431,10 @@ class GameScene extends game_1.BaseScene {
                     this.mouse = { x: event.raw.clientX - rect.left, y: event.raw.clientY - rect.top };
                     break;
                 case "MouseDown":
+                    if (this.paused || shot)
+                        break;
                     event = event;
-                    if (!shot && event.raw.button === 0 && performance.now() >= this.lastShot + this.player.gun.shootDelay) {
+                    if (!shot && event.raw.button === 0 && this.getTicks() >= this.lastShot + this.player.gun.shootDelay) {
                         shot = true;
                     }
                     break;
@@ -418,6 +445,8 @@ class GameScene extends game_1.BaseScene {
                             this.canvas.requestFullscreen();
                             break;
                         case "i":
+                            if (this.paused)
+                                break;
                             if (!this.showInventory) {
                                 this.showInventoryAnimation.on = true;
                                 this.showInventory = true;
@@ -428,22 +457,29 @@ class GameScene extends game_1.BaseScene {
                             }
                             break;
                         case "m":
-                            this.showMap = !this.showMap;
+                            this.map.mapNavigator = !this.map.mapNavigator;
+                            console.log("📓 ~ file: game.ts ~ line 193 ~ this.map.mapNavigator", this.map.mapNavigator);
                             break;
                         case "g":
                             (0, dungeonGenerator_1.fullGenerate)(this, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }]).then(layout => {
                                 this.dungeonManager.layout = layout;
                             });
                             break;
+                        case "p":
+                            console.log("Pause");
+                            this.paused = !this.paused;
+                            break;
                     }
                     break;
             }
-        }
+        });
         // Shooting
         if (shot)
             (0, shooting_1.shooting)(this);
     }
     update(dt) {
+        if (this.paused)
+            return;
         // Round
         this.roundManager.update();
         // Player
@@ -470,8 +506,10 @@ class GameScene extends game_1.BaseScene {
         this.enemies.forEach(enemy => enemy.draw(ctx));
         this.player.draw(ctx);
         (0, hud_1.drawHud)(ctx, this);
-        if (this.showMap)
-            this.dungeonManager.drawMap(ctx);
+        this.map.draw(ctx);
+    }
+    getTicks() {
+        return performance.now();
     }
 }
 exports.GameScene = GameScene;
@@ -480,7 +518,7 @@ function clamp(number, min, max) {
 }
 exports.clamp = clamp;
 
-},{"../animations":2,"../config":4,"../game":5,"../image":6,"../sound":20,"./game/dungeonGenerator":11,"./game/player":16,"./game/roundManager":17,"./hud":18,"./shooting":19}],9:[function(require,module,exports){
+},{"../animations":2,"../config":4,"../game":5,"../image":6,"../sound":21,"./game/dungeonGenerator":11,"./game/map":16,"./game/player":17,"./game/roundManager":18,"./hud":19,"./shooting":20}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Bullet = void 0;
@@ -638,7 +676,8 @@ function generateRoom(layout, lastRoom, game) {
         y: lastRoom.y,
         direction: [Direction.up],
         type: "dungeon",
-        dungeonRounds: new roundManager_1.RoundManager(game)
+        dungeonRounds: new roundManager_1.RoundManager(game),
+        discovered: false
     };
     let found = false;
     while (!found) {
@@ -646,7 +685,8 @@ function generateRoom(layout, lastRoom, game) {
             x: lastRoom.x,
             y: lastRoom.y,
             direction: [Direction.up],
-            type: "dungeon"
+            type: "dungeon",
+            discovered: false
         };
         if (layout[returnRoom.y + 1]?.[returnRoom.x] !== spaceCharacter
             && layout[returnRoom.y - 1]?.[returnRoom.x] !== spaceCharacter
@@ -744,11 +784,30 @@ function generate(game, options = { layoutSize: 7, rooms: 20 }, startPoint, preL
                     }
                     layout[lastRoom.y][lastRoom.x] = newRoom;
                     if (i === rooms - 1) {
+                        // TODO Backtracking for end room
+                        const below = layout[newRoom.y + 1]?.[newRoom.x];
+                        const above = layout[newRoom.y - 1]?.[newRoom.x];
+                        const left = layout[newRoom.y]?.[newRoom.x - 1];
+                        const right = layout[newRoom.y]?.[newRoom.x + 1];
+                        const direction = [];
+                        if (newRoom.y === below?.y && newRoom.x === below?.x) {
+                            direction.push(Direction.down);
+                        }
+                        else if (newRoom.y === above?.y && newRoom.x === above?.x) {
+                            direction.push(Direction.up);
+                        }
+                        else if (newRoom.y === left?.y && newRoom.x === left?.x) {
+                            direction.push(Direction.left);
+                        }
+                        else if (newRoom.y === right?.y && newRoom.x === right?.x) {
+                            direction.push(Direction.right);
+                        }
                         layout[newRoom.y][newRoom.x] = {
                             type: "end",
                             x: newRoom.x,
                             y: newRoom.y,
-                            direction: []
+                            direction: direction,
+                            discovered: false
                         };
                     }
                     else {
@@ -817,7 +876,7 @@ function appendSpecial(layout, roomType) {
         availableDirections.push(Direction.down);
     const direction = availableDirections[Math.round((0, game_2.random)(0, availableDirections.length - 1))];
     layout[room.y][room.x] = { ...room, direction: [...room.direction, direction] };
-    let specialRoom = { ...room, direction: [], type: roomType };
+    let specialRoom = { ...room, discovered: false, direction: [], type: roomType };
     switch (direction) {
         case Direction.up:
             specialRoom.y = specialRoom.y - 1;
@@ -841,16 +900,20 @@ function appendSpecial(layout, roomType) {
 function fullGenerate(game, options = { layoutSize: 7, rooms: 20 }, specialRooms = [], print = false) {
     return new Promise(async (resolve, _) => {
         check(game, options, print).then(_layout => {
+            _layout[(_layout.length - 1) / 2][(_layout.length - 1) / 2].discovered = true; // Set middle as discovered
             const layout = _layout;
-            specialRooms.forEach(option => { for (let i = 0; i < option.count - 1; i++)
-                appendSpecial(layout, option.type); });
+            specialRooms.forEach(option => {
+                for (let i = 0; i < option.count - 1; i++) {
+                    appendSpecial(layout, option.type);
+                }
+            });
             resolve(layout);
         });
     });
 }
 exports.fullGenerate = fullGenerate;
 
-},{"../../game":5,"../game":8,"./roundManager":17}],12:[function(require,module,exports){
+},{"../../game":5,"../game":8,"./roundManager":18}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BallEnemy = exports.Ball = void 0;
@@ -957,7 +1020,7 @@ class BallEnemy {
         this.health = this.maxHealth;
         this.range = 250;
         this.shotCooldown = 10000;
-        this.lastShot = performance.now();
+        this.lastShot = game.getTicks();
         // this.balls = []
         this.game = game;
     }
@@ -987,8 +1050,8 @@ class BallEnemy {
         }
         else {
             // Shooting
-            if (performance.now() >= this.lastShot + this.shotCooldown) {
-                this.lastShot = performance.now();
+            if (this.game.getTicks() >= this.lastShot + this.shotCooldown) {
+                this.lastShot = this.game.getTicks();
                 const ball = new Ball(this.location.x, this.location.y, (0, angles_1.getAngle)(this.location, this.game.player.location), this.game.ballId, this.game);
                 this.game.balls.push(ball);
                 // this.balls.push(ball.id)
@@ -1078,8 +1141,8 @@ class Ray {
         this.destinationX = destination.x;
         this.destinationY = destination.y;
         this.state = "wind";
-        this.windEndTime = performance.now() + windLength;
-        this.fireEndTime = performance.now() + windLength + fireLength;
+        this.windEndTime = game.getTicks() + windLength;
+        this.fireEndTime = game.getTicks() + windLength + fireLength;
         this.id = id;
         this.game = game;
         this.createBounce = createBounce;
@@ -1142,10 +1205,10 @@ class Ray {
         }
     }
     update() {
-        if (performance.now() >= this.windEndTime && performance.now() < this.fireEndTime) {
+        if (this.game.getTicks() >= this.windEndTime && this.game.getTicks() < this.fireEndTime) {
             this.state = "fire";
         }
-        else if (performance.now() >= this.fireEndTime) {
+        else if (this.game.getTicks() >= this.fireEndTime) {
             this.state = "end";
         }
         else {
@@ -1222,7 +1285,7 @@ class RangedEnemy {
         this.health = this.maxHealth;
         this.range = 500;
         this.shotCooldown = 5000;
-        this.lastShot = performance.now();
+        this.lastShot = game.getTicks();
         this.rays = [];
         this.game = game;
     }
@@ -1251,8 +1314,8 @@ class RangedEnemy {
         }
         else {
             // Shooting
-            if (performance.now() >= this.lastShot + this.shotCooldown) {
-                this.lastShot = performance.now();
+            if (this.game.getTicks() >= this.lastShot + this.shotCooldown) {
+                this.lastShot = this.game.getTicks();
                 // Lead player
                 const ray = new Ray(this.location.x, this.location.y, (Math.random() > 0.5) ? leadPlayer(this.location.x, this.location.y, this.game.player) : (0, angles_1.getAngle)(this.location, this.game.player.location), 500, 1500, this.game.rayId, this.game, true);
                 this.game.rays.push(ray);
@@ -1322,7 +1385,7 @@ class SpiralEnemy {
         this.health = this.maxHealth;
         this.game = game;
         this.currentShootAngle = 0;
-        this.lastShot = performance.now();
+        this.lastShot = game.getTicks();
         this.shootDelay = 1000;
         this.station = false;
     }
@@ -1344,8 +1407,8 @@ class SpiralEnemy {
             this.station = true;
         }
         this.currentShootAngle += (50 * dt) % 360;
-        if (this.station && performance.now() >= this.lastShot + this.shootDelay) {
-            this.lastShot = performance.now();
+        if (this.station && this.game.getTicks() >= this.lastShot + this.shootDelay) {
+            this.lastShot = this.game.getTicks();
             const oppositeAngle = (this.currentShootAngle - 180) % 360;
             this.game.bullets.push(new bullet_1.Bullet(this.location.x, this.location.y, 10, 10, this.currentShootAngle * (Math.PI / 180), 0.04, this.game.bulletId, 6, 1, 300, this.game, true));
             this.game.bulletId += 1;
@@ -1452,7 +1515,147 @@ exports.the360 = the360;
 const guns = [pistol, smg, ak47, sniper, shotgun, the360];
 exports.guns = guns;
 
-},{"../../image":6,"../../sound":20}],16:[function(require,module,exports){
+},{"../../image":6,"../../sound":21}],16:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Map = void 0;
+const config_1 = require("../../config");
+const dungeonGenerator_1 = require("./dungeonGenerator");
+class Map {
+    game;
+    // show: boolean
+    _mapNavigator;
+    get mapNavigator() { return this._mapNavigator; }
+    set mapNavigator(value) {
+        if (this._mapNavigator === value)
+            return;
+        this._mapNavigator = value;
+        this.game.paused = value;
+    }
+    constructor(game) {
+        this.game = game;
+        // this.show = false
+        this._mapNavigator = false;
+    }
+    drawRoom(room, ctx) {
+        if (this.game.dungeonManager.layout === null)
+            return;
+        ctx.fillStyle = (room.type === "chest") ? "#F39503" : (room.type === "shop") ? "#00FF00" : (room.type === "end") ? "#FFFF00" : "#FF0000";
+        const roomSize = 64;
+        const roomMargin = 10;
+        const roomXOffset = (room.x - ((this.game.dungeonManager.layout.length - 1) / 2));
+        const roomYOffset = (((this.game.dungeonManager.layout.length - 1) / 2) - room.y);
+        const roomX = config_1.config.width / 2 + (roomXOffset * roomSize) + (roomXOffset * roomMargin);
+        const roomY = config_1.config.height / 2 - (roomYOffset * roomSize) - (roomYOffset * roomMargin);
+        ctx.fillRect(roomX - roomSize / 2, roomY - roomSize / 2, roomSize, roomSize);
+        if (this.game.dungeonManager.currentRoom.x === room.x && this.game.dungeonManager.currentRoom.y === room.y) {
+            ctx.shadowBlur = 4;
+            ctx.shadowColor = "#FFFFFF";
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.arc(roomX, roomY, 2, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+        // Tunnels
+        ctx.fillStyle = "#00FFFF";
+        const tunnelSize = roomMargin;
+        room.direction.forEach(direction => {
+            switch (direction) {
+                case dungeonGenerator_1.Direction.up:
+                    // ctx.fillStyle = "#00FFFF"
+                    ctx.fillRect(roomX - tunnelSize, roomY - roomSize / 2 - tunnelSize, tunnelSize * 2, tunnelSize);
+                    break;
+                case dungeonGenerator_1.Direction.down:
+                    // ctx.fillStyle = "#FFFF00"
+                    ctx.fillRect(roomX - tunnelSize, roomY + roomSize / 2, tunnelSize * 2, tunnelSize);
+                    break;
+                case dungeonGenerator_1.Direction.left:
+                    // ctx.fillStyle = "#FF00FF"
+                    ctx.fillRect(roomX - roomSize / 2 - tunnelSize, roomY - tunnelSize / 2, tunnelSize, tunnelSize * 2);
+                    break;
+                case dungeonGenerator_1.Direction.right:
+                    // ctx.fillStyle = "#5920F0"
+                    ctx.fillRect(roomX + roomSize / 2, roomY - tunnelSize / 2, tunnelSize, tunnelSize * 2);
+                    break;
+            }
+        });
+    }
+    drawMap(ctx) {
+        if (this.game.dungeonManager.layout === null)
+            return;
+        for (let y = 0; y < this.game.dungeonManager.layout.length; y++) {
+            for (let x = 0; x < this.game.dungeonManager.layout[y].length; x++) {
+                const room = this.game.dungeonManager.layout[y][x];
+                if (room?.discovered === false)
+                    continue;
+                if (room !== "0") {
+                    this.drawRoom({ ...room, x: x, y: y }, ctx);
+                }
+            }
+        }
+    }
+    draw(ctx) {
+        if (this.game.dungeonManager.layout === null)
+            return;
+        if (this.mapNavigator) {
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(0, 0, config_1.config.width, config_1.config.height);
+            this.drawMap(ctx);
+        }
+    }
+    processInput(events) {
+        if (this.game.dungeonManager.layout === null || this.game.dungeonManager.currentRoom === null)
+            return;
+        if (this.game.roundManager.active)
+            return;
+        if (!this.mapNavigator)
+            return;
+        let hspd = 0;
+        let vspd = 0;
+        const currentRoom = this.game.dungeonManager.currentRoomObject;
+        events.filter(event => event.eventType === "KeyDown").forEach(event => {
+            event = event;
+            switch (event.key.toLowerCase()) {
+                case "w":
+                    if (!currentRoom.direction.includes(dungeonGenerator_1.Direction.up))
+                        break;
+                    vspd -= 1;
+                    break;
+                case "s":
+                    if (!currentRoom.direction.includes(dungeonGenerator_1.Direction.down))
+                        break;
+                    vspd += 1;
+                    break;
+                case "a":
+                    if (!currentRoom.direction.includes(dungeonGenerator_1.Direction.left))
+                        break;
+                    hspd -= 1;
+                    break;
+                case "d":
+                    if (!currentRoom.direction.includes(dungeonGenerator_1.Direction.right))
+                        break;
+                    hspd += 1;
+                    break;
+            }
+        });
+        if (this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd][this.game.dungeonManager.currentRoom.x] === dungeonGenerator_1.spaceCharacter)
+            vspd = 0;
+        if (this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y][this.game.dungeonManager.currentRoom.x + hspd] === dungeonGenerator_1.spaceCharacter)
+            hspd = 0;
+        if (hspd === 0 && vspd === 0)
+            return;
+        if (this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd]?.[this.game.dungeonManager.currentRoom.x + hspd]?.discovered === false) {
+            this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd][this.game.dungeonManager.currentRoom.x + hspd].discovered = true;
+        }
+        this.game.dungeonManager.currentRoom.x += hspd;
+        this.game.dungeonManager.currentRoom.y += vspd;
+    }
+}
+exports.Map = Map;
+
+},{"../../config":4,"./dungeonGenerator":11}],17:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Player = void 0;
@@ -1529,7 +1732,7 @@ class Player {
         }, () => {
             this.dashSound.clonePlay();
             this.dashing = true;
-            this.lastDash = performance.now();
+            this.lastDash = this.game.getTicks();
             this.dashOrigin = this.location;
         }, () => {
             this.dashing = false;
@@ -1558,7 +1761,7 @@ class Player {
         }
         this._lives = 999;
         this.iFrames = 500;
-        this.lastHit = performance.now();
+        this.lastHit = game.getTicks();
         this.hitSound = new sound_1.Sound("./sounds/hitHurt.wav");
         this.game = game;
     }
@@ -1571,7 +1774,7 @@ class Player {
             this._lives -= damage;
             return;
         }
-        if (performance.now() >= this.lastHit + this.iFrames && !this.dashing) {
+        if (this.game.getTicks() >= this.lastHit + this.iFrames && !this.dashing) {
             this._lives -= damage;
             this.hitSound.clonePlay();
             if (this.lives < 1) {
@@ -1581,7 +1784,7 @@ class Player {
                 return;
             }
             // iFrames
-            this.lastHit = performance.now();
+            this.lastHit = this.game.getTicks();
         }
     }
     draw(ctx) {
@@ -1626,6 +1829,8 @@ class Player {
         this.dashAnimation.update(dt);
     }
     processInput(events, pressedKeys, dt) {
+        if (this.game.paused)
+            return;
         // Weapon switch
         events.filter(event => event.eventType === "KeyDown" && event.raw.code.startsWith("Digit")).forEach(event => {
             event = event;
@@ -1640,7 +1845,7 @@ class Player {
         events.filter(event => event.eventType === "KeyDown" && event.key.toLowerCase() === " ").forEach(() => {
             if (this.dashing)
                 return;
-            if (!(performance.now() >= this.lastDash + this.dashDelay))
+            if (!(this.game.getTicks() >= this.lastDash + this.dashDelay))
                 return;
             if ((pressedKeys.get("w") || pressedKeys.get("W"))
                 && (pressedKeys.get("a") || pressedKeys.get("A"))) {
@@ -1721,7 +1926,7 @@ class Player {
 }
 exports.Player = Player;
 
-},{"../../angles":1,"../../animations":2,"../../config":4,"../../image":6,"../../sound":20,"./guns":15}],17:[function(require,module,exports){
+},{"../../angles":1,"../../animations":2,"../../config":4,"../../image":6,"../../sound":21,"./guns":15}],18:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DungeonManager = exports.RoundManager = void 0;
@@ -1733,70 +1938,23 @@ const ballEnemy_1 = require("./enemies/ballEnemy");
 const rangedEnemy_1 = require("./enemies/rangedEnemy");
 const spiralEnemy_1 = require("./enemies/spiralEnemy");
 class DungeonManager {
-    layout;
+    _layout;
+    get layout() { return this._layout; }
+    set layout(layout) {
+        this.currentRoom = { x: (layout.length - 1) / 2, y: (layout.length - 1) / 2 };
+        this._layout = layout;
+    }
     currentRoom;
+    get currentRoomObject() {
+        if (this._layout === null || this.currentRoom === null)
+            return null;
+        return this._layout[this.currentRoom.y][this.currentRoom.x];
+    }
     constructor(game) {
-        (0, dungeonGenerator_1.fullGenerate)(game, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }]).then(layout => {
-            this.layout = layout;
+        (0, dungeonGenerator_1.fullGenerate)(game, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }, { type: "chest", count: 3 }]).then(layout => {
+            this._layout = layout;
             this.currentRoom = { x: (layout.length - 1) / 2, y: (layout.length - 1) / 2 };
         });
-    }
-    drawRoom(room, ctx) {
-        if (this.layout === null)
-            return;
-        ctx.fillStyle = (room.type === "chest") ? "#F39503" : (room.type === "shop") ? "#00FF00" : (room.type === "end") ? "#FFFF00" : "#FF0000";
-        const roomSize = 64;
-        const roomMargin = 10;
-        const roomXOffset = (room.x - ((this.layout.length - 1) / 2));
-        const roomYOffset = (((this.layout.length - 1) / 2) - room.y);
-        const roomX = config_1.config.width / 2 + (roomXOffset * roomSize) + (roomXOffset * roomMargin);
-        const roomY = config_1.config.height / 2 - (roomYOffset * roomSize) - (roomYOffset * roomMargin);
-        ctx.fillRect(roomX - roomSize / 2, roomY - roomSize / 2, roomSize, roomSize);
-        if (this.currentRoom.x === room.x && this.currentRoom.y === room.y) {
-            ctx.shadowBlur = 4;
-            ctx.shadowColor = "#FFFFFF";
-            ctx.strokeStyle = "#000000";
-            ctx.lineWidth = 10;
-            ctx.beginPath();
-            ctx.arc(roomX, roomY, 2, 0, 2 * Math.PI);
-            ctx.stroke();
-            ctx.shadowBlur = 0;
-        }
-        // Tunnels
-        ctx.fillStyle = "#000000";
-        const tunnelSize = roomMargin;
-        room.direction.forEach(direction => {
-            switch (direction) {
-                case dungeonGenerator_1.Direction.up:
-                    // ctx.fillStyle = "#00FFFF"
-                    ctx.fillRect(roomX - tunnelSize, roomY - roomSize / 2 - tunnelSize, tunnelSize * 2, tunnelSize);
-                    break;
-                case dungeonGenerator_1.Direction.down:
-                    // ctx.fillStyle = "#FFFF00"
-                    ctx.fillRect(roomX - tunnelSize, roomY + roomSize / 2, tunnelSize * 2, tunnelSize);
-                    break;
-                case dungeonGenerator_1.Direction.left:
-                    // ctx.fillStyle = "#FF00FF"
-                    ctx.fillRect(roomX - roomSize / 2 - tunnelSize, roomY - tunnelSize / 2, tunnelSize, tunnelSize * 2);
-                    break;
-                case dungeonGenerator_1.Direction.right:
-                    // ctx.fillStyle = "#5920F0"
-                    ctx.fillRect(roomX + roomSize / 2, roomY - tunnelSize / 2, tunnelSize, tunnelSize * 2);
-                    break;
-            }
-        });
-    }
-    drawMap(ctx) {
-        if (this.layout === null)
-            return;
-        for (let y = 0; y < this.layout.length; y++) {
-            for (let x = 0; x < this.layout[y].length; x++) {
-                const room = this.layout[y][x];
-                if (room !== "0") {
-                    this.drawRoom({ ...room, x: x, y: y }, ctx);
-                }
-            }
-        }
     }
 }
 exports.DungeonManager = DungeonManager;
@@ -1810,7 +1968,7 @@ class RoundManager {
     lastEnemySpawn;
     lastCrateSpawn;
     constructor(game) {
-        this.active = true;
+        this.active = false;
         this.rounds = [];
         for (let i = 0; i < 10; i++) {
             this.rounds[i] = {
@@ -1825,8 +1983,8 @@ class RoundManager {
         this.enemiesKilledThisRound = 0;
         this.round = 0;
         this.game = game;
-        this.lastEnemySpawn = performance.now();
-        this.lastCrateSpawn = performance.now();
+        this.lastEnemySpawn = this.game.getTicks();
+        this.lastCrateSpawn = this.game.getTicks();
     }
     update() {
         if (!this.active)
@@ -1842,8 +2000,8 @@ class RoundManager {
             return;
         }
         const round = this.rounds[this.round];
-        if (performance.now() >= this.lastEnemySpawn + round.enemySpawnDelay && this.game.enemies.length < round.maxEnemies) {
-            this.lastEnemySpawn = performance.now();
+        if (this.game.getTicks() >= this.lastEnemySpawn + round.enemySpawnDelay && this.game.enemies.length < round.maxEnemies) {
+            this.lastEnemySpawn = this.game.getTicks();
             let x = 0;
             let y = 0;
             switch (Math.round((0, game_1.random)(0, 3))) {
@@ -1886,8 +2044,8 @@ class RoundManager {
             this.game.enemies.push(new (enemy)(x, y, this.game.enemyId, this.game));
             this.game.enemyId += 1;
         }
-        if (performance.now() >= this.lastCrateSpawn + round.crateSpawnDelay && this.game.crates.length < round.maxCrates) {
-            this.lastCrateSpawn = performance.now();
+        if (this.game.getTicks() >= this.lastCrateSpawn + round.crateSpawnDelay && this.game.crates.length < round.maxCrates) {
+            this.lastCrateSpawn = this.game.getTicks();
             this.game.crates.push(crate_1.Crate.randomCrate(this.game.crateId, this.game, this.game.crateImage));
             this.game.crateId += 1;
         }
@@ -1895,7 +2053,7 @@ class RoundManager {
 }
 exports.RoundManager = RoundManager;
 
-},{"../../config":4,"../game":8,"./crate":10,"./dungeonGenerator":11,"./enemies/ballEnemy":12,"./enemies/rangedEnemy":13,"./enemies/spiralEnemy":14}],18:[function(require,module,exports){
+},{"../../config":4,"../game":8,"./crate":10,"./dungeonGenerator":11,"./enemies/ballEnemy":12,"./enemies/rangedEnemy":13,"./enemies/spiralEnemy":14}],19:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.margin = exports.drawHud = void 0;
@@ -1911,7 +2069,7 @@ function drawAmmoCounter(number, ammoType, image, ctx, game) {
     ctx.fillText(game.player.ammo[ammoType].toString(), 32 * (number - 1) + (margin * number + 16) - (ctx.measureText(game.player.ammo[ammoType].toString()).width) / 2, config_1.config.height - (32 + margin * 1.5));
     if (game.player.gun.ammo === ammoType) {
         // Cooldown screen
-        const cooldownPercent = ((((0, game_1.clamp)(performance.now() - game.lastShot, 0, game.player.gun.shootDelay)) - game.player.gun.shootDelay) * -1) / game.player.gun.shootDelay;
+        const cooldownPercent = ((((0, game_1.clamp)(game.getTicks() - game.lastShot, 0, game.player.gun.shootDelay)) - game.player.gun.shootDelay) * -1) / game.player.gun.shootDelay;
         const length = 32 * cooldownPercent;
         ctx.fillRect(32 * (number - 1) + (margin * number + 16) - length / 2, config_1.config.height - (margin), length, margin / 4);
     }
@@ -1981,7 +2139,7 @@ function drawHud(ctx, game) {
 }
 exports.drawHud = drawHud;
 
-},{"../config":4,"./game":8,"./game/guns":15}],19:[function(require,module,exports){
+},{"../config":4,"./game":8,"./game/guns":15}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.shooting = void 0;
@@ -1996,16 +2154,16 @@ function shooting(game) {
             game.bullets.push(new bullet_1.Bullet(game.player.location.x, game.player.location.y, 10, 10, angle, 1, game.bulletId, game.player.gun.inaccuracy, game.player.gun.damage, game.player.gun.range, game));
             game.bulletId += 1;
         }
-        game.lastShot = performance.now();
+        game.lastShot = game.getTicks();
     }
     else {
         game.noAmmoSound.clonePlay();
-        game.lastShot = performance.now();
+        game.lastShot = game.getTicks();
     }
 }
 exports.shooting = shooting;
 
-},{"../angles":1,"./game/bullet":9}],20:[function(require,module,exports){
+},{"../angles":1,"./game/bullet":9}],21:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.volume = exports.Sound = void 0;

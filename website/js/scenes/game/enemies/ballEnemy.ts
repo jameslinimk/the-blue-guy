@@ -119,7 +119,7 @@ class BallEnemy implements Enemy {
 
         this.range = 250
         this.shotCooldown = 10000
-        this.lastShot = performance.now()
+        this.lastShot = game.getTicks()
 
         // this.balls = []
         this.game = game
@@ -152,8 +152,8 @@ class BallEnemy implements Enemy {
             this.location = location
         } else {
             // Shooting
-            if (performance.now() >= this.lastShot + this.shotCooldown) {
-                this.lastShot = performance.now()
+            if (this.game.getTicks() >= this.lastShot + this.shotCooldown) {
+                this.lastShot = this.game.getTicks()
                 const ball = new Ball(this.location.x, this.location.y, getAngle(this.location, this.game.player.location), this.game.ballId, this.game)
                 this.game.balls.push(ball)
                 // this.balls.push(ball.id)

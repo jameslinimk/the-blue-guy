@@ -14,10 +14,10 @@ function shooting(game: GameScene) {
             game.bulletId += 1
         }
 
-        game.lastShot = performance.now()
+        game.lastShot = game.getTicks()
     } else {
         game.noAmmoSound.clonePlay()
-        game.lastShot = performance.now()
+        game.lastShot = game.getTicks()
     }
 }
 

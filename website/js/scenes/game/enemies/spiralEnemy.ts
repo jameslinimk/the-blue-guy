@@ -25,7 +25,7 @@ class SpiralEnemy implements Enemy {
         this.health = this.maxHealth
         this.game = game
         this.currentShootAngle = 0
-        this.lastShot = performance.now()
+        this.lastShot = game.getTicks()
         this.shootDelay = 1000
         this.station = false
     }
@@ -49,8 +49,8 @@ class SpiralEnemy implements Enemy {
         }
 
         this.currentShootAngle += (50 * dt) % 360
-        if (this.station && performance.now() >= this.lastShot + this.shootDelay) {
-            this.lastShot = performance.now()
+        if (this.station && this.game.getTicks() >= this.lastShot + this.shootDelay) {
+            this.lastShot = this.game.getTicks()
 
             const oppositeAngle = (this.currentShootAngle - 180) % 360
 

@@ -103,7 +103,7 @@ class Player {
         }, () => {
             this.dashSound.clonePlay()
             this.dashing = true
-            this.lastDash = performance.now()
+            this.lastDash = this.game.getTicks()
             this.dashOrigin = this.location
         }, () => {
             this.dashing = false
@@ -134,7 +134,7 @@ class Player {
 
         this._lives = 999
         this.iFrames = 500
-        this.lastHit = performance.now()
+        this.lastHit = game.getTicks()
         this.hitSound = new Sound("./sounds/hitHurt.wav")
 
         this.game = game
@@ -150,7 +150,7 @@ class Player {
             return
         }
 
-        if (performance.now() >= this.lastHit + this.iFrames && !this.dashing) {
+        if (this.game.getTicks() >= this.lastHit + this.iFrames && !this.dashing) {
             this._lives -= damage
             this.hitSound.clonePlay()
 
@@ -162,7 +162,7 @@ class Player {
             }
 
             // iFrames
-            this.lastHit = performance.now()
+            this.lastHit = this.game.getTicks()
         }
     }
 
@@ -213,6 +213,8 @@ class Player {
     }
 
     processInput(events: Events, pressedKeys: PressedKeys, dt: number) {
+        if (this.game.paused) return
+
         // Weapon switch
         events.filter(event => event.eventType === "KeyDown" && (event as KeyDownEvent).raw.code.startsWith("Digit")).forEach(event => {
             event = <KeyDownEvent>event
@@ -227,7 +229,7 @@ class Player {
         // Dashing
         events.filter(event => event.eventType === "KeyDown" && (event as KeyDownEvent).key.toLowerCase() === " ").forEach(() => {
             if (this.dashing) return
-            if (!(performance.now() >= this.lastDash + this.dashDelay)) return
+            if (!(this.game.getTicks() >= this.lastDash + this.dashDelay)) return
 
             if ((pressedKeys.get("w") || pressedKeys.get("W"))
                 && (pressedKeys.get("a") || pressedKeys.get("A"))) {

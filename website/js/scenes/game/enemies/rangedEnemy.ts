@@ -82,8 +82,8 @@ class Ray {
         this.destinationY = destination.y
 
         this.state = "wind"
-        this.windEndTime = performance.now() + windLength
-        this.fireEndTime = performance.now() + windLength + fireLength
+        this.windEndTime = game.getTicks() + windLength
+        this.fireEndTime = game.getTicks() + windLength + fireLength
 
         this.id = id
         this.game = game
@@ -154,9 +154,9 @@ class Ray {
     }
 
     update() {
-        if (performance.now() >= this.windEndTime && performance.now() < this.fireEndTime) {
+        if (this.game.getTicks() >= this.windEndTime && this.game.getTicks() < this.fireEndTime) {
             this.state = "fire"
-        } else if (performance.now() >= this.fireEndTime) {
+        } else if (this.game.getTicks() >= this.fireEndTime) {
             this.state = "end"
         } else {
             this.state = "wind"
@@ -239,7 +239,7 @@ class RangedEnemy implements Enemy {
 
         this.range = 500
         this.shotCooldown = 5000
-        this.lastShot = performance.now()
+        this.lastShot = game.getTicks()
 
         this.rays = []
         this.game = game
@@ -271,8 +271,8 @@ class RangedEnemy implements Enemy {
             this.location = location
         } else {
             // Shooting
-            if (performance.now() >= this.lastShot + this.shotCooldown) {
-                this.lastShot = performance.now()
+            if (this.game.getTicks() >= this.lastShot + this.shotCooldown) {
+                this.lastShot = this.game.getTicks()
 
                 // Lead player
                 const ray = new Ray(this.location.x, this.location.y, (Math.random() > 0.5) ? leadPlayer(this.location.x, this.location.y, this.game.player) : getAngle(this.location, this.game.player.location), 500, 1500, this.game.rayId, this.game, true)

@@ -10,6 +10,7 @@ import { fullGenerate } from "./game/dungeonGenerator"
 import { Ball } from "./game/enemies/ballEnemy"
 import { Enemy } from "./game/enemies/enemy"
 import { Ray } from "./game/enemies/rangedEnemy"
+import { Map } from "./game/map"
 import { Player } from "./game/player"
 import { DungeonManager, RoundManager } from "./game/roundManager"
 import { drawHud, margin } from "./hud"
@@ -20,13 +21,17 @@ function random(min: number, max: number) {
 }
 
 class GameScene extends BaseScene {
+    /* ---------------------------------- Misc ---------------------------------- */
     player: Player
+    mouse: Coordinates
 
+    /* --------------------------------- Bullets -------------------------------- */
     bullets: Bullet[]
     noAmmoSound: Sound
     bulletId: number
     lastShot: number
 
+    /* --------------------------------- Enemies -------------------------------- */
     enemies: Enemy[]
     enemyId: number
     rays: Ray[]
@@ -34,16 +39,17 @@ class GameScene extends BaseScene {
     balls: Ball[]
     ballId: number
 
-    mouse: Coordinates
-
+    /* --------------------------------- Crates --------------------------------- */
     crates: Crate[]
     crateId: number
     cratePickupSound: Sound
 
+    /* -------------------------------- Managers -------------------------------- */
     roundManager: RoundManager
     dungeonManager: DungeonManager
-    showMap: boolean
+    map: Map
 
+    /* --------------------------------- Images --------------------------------- */
     healthImage: CustomImage
     crateImage: CustomImage
 
@@ -54,10 +60,26 @@ class GameScene extends BaseScene {
     shellsAmmoImage: CustomImage
     rangedEnemyImage: CustomImage
 
+    /* -------------------------------- Inventory ------------------------------- */
     showInventory: boolean
     showInventoryX: number
     showInventoryAnimation: CustomAnimation
     hideInventoryAnimation: CustomAnimation
+
+    /* --------------------------------- Pausing -------------------------------- */
+    private _paused: boolean
+    get paused() { return this._paused }
+    set paused(paused: boolean) {
+        if (this._paused === paused) return
+        this._paused = paused
+
+        if (paused) {
+            // this.pausedAt = performance.now()
+            return
+        }
+    }
+    // TODO Make getTicks() pause when paused
+    pausedAt: number
 
     constructor() {
         super()
@@ -85,7 +107,7 @@ class GameScene extends BaseScene {
 
         this.roundManager = new RoundManager(this)
         this.dungeonManager = new DungeonManager(this)
-        this.showMap = false
+        this.map = new Map(this)
 
         this.healthImage = new CustomImage("./images/health.png")
         this.crateImage = new CustomImage("./images/crate.png")
@@ -114,16 +136,20 @@ class GameScene extends BaseScene {
         }, () => {
             this.showInventoryX = config.width - margin
         })
+
+        this._paused = false
+        this.pausedAt = performance.now()
     }
 
     processInput(events: Events, pressedKeys: PressedKeys, dt: number) {
         this.player.processInput(events, pressedKeys, dt)
+        this.map.processInput(events)
 
         /* -------------------------------------------------------------------------- */
         /*                                   Events                                   */
         /* -------------------------------------------------------------------------- */
-        let shot = this.player.gun.holdable && pressedKeys.get("Mouse Left") && performance.now() >= this.lastShot + this.player.gun.shootDelay
-        for (let event of events) {
+        let shot = !this.paused && this.player.gun.holdable && pressedKeys.get("Mouse Left") && this.getTicks() >= this.lastShot + this.player.gun.shootDelay
+        events.forEach(event => {
             switch (event.eventType) {
                 case "MouseMove":
                     event = <MouseMoveEvent>event
@@ -134,8 +160,10 @@ class GameScene extends BaseScene {
                     break
 
                 case "MouseDown":
+                    if (this.paused || shot) break
+
                     event = <MouseDownEvent>event
-                    if (!shot && event.raw.button === 0 && performance.now() >= this.lastShot + this.player.gun.shootDelay) {
+                    if (!shot && event.raw.button === 0 && this.getTicks() >= this.lastShot + this.player.gun.shootDelay) {
                         shot = true
                     }
                     break
@@ -147,6 +175,8 @@ class GameScene extends BaseScene {
                             this.canvas.requestFullscreen()
                             break
                         case "i":
+                            if (this.paused) break
+
                             if (!this.showInventory) {
                                 this.showInventoryAnimation.on = true
                                 this.showInventory = true
@@ -156,23 +186,30 @@ class GameScene extends BaseScene {
                             }
                             break
                         case "m":
-                            this.showMap = !this.showMap
+                            this.map.mapNavigator = !this.map.mapNavigator
+                            console.log("📓 ~ file: game.ts ~ line 193 ~ this.map.mapNavigator", this.map.mapNavigator)
                             break
                         case "g":
                             fullGenerate(this, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }]).then(layout => {
                                 this.dungeonManager.layout = layout
                             })
                             break
+                        case "p":
+                            console.log("Pause")
+                            this.paused = !this.paused
+                            break
                     }
                     break
             }
-        }
+        })
 
         // Shooting
         if (shot) shooting(this)
     }
 
     update(dt: number) {
+        if (this.paused) return
+
         // Round
         this.roundManager.update()
 
@@ -206,7 +243,11 @@ class GameScene extends BaseScene {
         this.enemies.forEach(enemy => enemy.draw(ctx))
         this.player.draw(ctx)
         drawHud(ctx, this)
-        if (this.showMap) this.dungeonManager.drawMap(ctx)
+        this.map.draw(ctx)
+    }
+
+    getTicks() {
+        return performance.now()
     }
 }
 

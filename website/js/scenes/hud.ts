@@ -13,7 +13,7 @@ function drawAmmoCounter(number: number, ammoType: Ammo, image: CustomImage, ctx
 
     if (game.player.gun.ammo === ammoType) {
         // Cooldown screen
-        const cooldownPercent = (((clamp(performance.now() - game.lastShot, 0, game.player.gun.shootDelay)) - game.player.gun.shootDelay) * -1) / game.player.gun.shootDelay
+        const cooldownPercent = (((clamp(game.getTicks() - game.lastShot, 0, game.player.gun.shootDelay)) - game.player.gun.shootDelay) * -1) / game.player.gun.shootDelay
         const length = 32 * cooldownPercent
         ctx.fillRect(32 * (number - 1) + (margin * number + 16) - length / 2, config.height - (margin), length, margin / 4)
     }

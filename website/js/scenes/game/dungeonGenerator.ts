@@ -14,6 +14,7 @@ interface Room {
     x: number
     y: number
     direction: Direction[]
+    discovered: boolean
 } // TODO: broken? X and Y values seem to be switched. Quick fix: redefine room.x and room.y at the end
 type Layout = (Room | "0")[][]
 
@@ -23,7 +24,8 @@ function generateRoom(layout: Layout, lastRoom: Coordinates, game: GameScene) {
         y: lastRoom.y,
         direction: [Direction.up],
         type: "dungeon",
-        dungeonRounds: new RoundManager(game)
+        dungeonRounds: new RoundManager(game),
+        discovered: false
     }
     let found = false
     while (!found) {
@@ -31,7 +33,8 @@ function generateRoom(layout: Layout, lastRoom: Coordinates, game: GameScene) {
             x: lastRoom.x,
             y: lastRoom.y,
             direction: [Direction.up],
-            type: "dungeon"
+            type: "dungeon",
+            discovered: false
         }
 
         if (layout[returnRoom.y + 1]?.[returnRoom.x] !== spaceCharacter
@@ -134,11 +137,28 @@ function generate(game: GameScene, options: { layoutSize: number, rooms: number 
 
                     layout[lastRoom.y][lastRoom.x] = newRoom
                     if (i === rooms - 1) {
+                        // TODO Backtracking for end room
+                        const below = <Room>layout[newRoom.y + 1]?.[newRoom.x]
+                        const above = <Room>layout[newRoom.y - 1]?.[newRoom.x]
+                        const left = <Room>layout[newRoom.y]?.[newRoom.x - 1]
+                        const right = <Room>layout[newRoom.y]?.[newRoom.x + 1]
+                        const direction = []
+                        if (newRoom.y === below?.y && newRoom.x === below?.x) {
+                            direction.push(Direction.down)
+                        } else if (newRoom.y === above?.y && newRoom.x === above?.x) {
+                            direction.push(Direction.up)
+                        } else if (newRoom.y === left?.y && newRoom.x === left?.x) {
+                            direction.push(Direction.left)
+                        } else if (newRoom.y === right?.y && newRoom.x === right?.x) {
+                            direction.push(Direction.right)
+                        }
+
                         layout[newRoom.y][newRoom.x] = {
                             type: "end",
                             x: newRoom.x,
                             y: newRoom.y,
-                            direction: []
+                            direction: direction,
+                            discovered: false
                         }
                     } else {
                         layout[newRoom.y][newRoom.x] = spaceCharacter
@@ -205,7 +225,7 @@ function appendSpecial(layout: Layout, roomType: RoomType) {
     const direction = availableDirections[Math.round(random(0, availableDirections.length - 1))]
 
     layout[room.y][room.x] = { ...room, direction: [...room.direction, direction] }
-    let specialRoom: Room = { ...room, direction: [], type: roomType }
+    let specialRoom: Room = { ...room, discovered: false, direction: [], type: roomType }
 
     switch (direction) {
         case Direction.up:
@@ -231,8 +251,13 @@ function appendSpecial(layout: Layout, roomType: RoomType) {
 function fullGenerate(game: GameScene, options: { layoutSize: number, rooms: number } = { layoutSize: 7, rooms: 20 }, specialRooms: { type: RoomType, count: number }[] = [], print = false) {
     return new Promise<Layout>(async (resolve, _) => {
         check(game, options, print).then(_layout => {
+            _layout[((<Layout>_layout).length - 1) / 2][((<Layout>_layout).length - 1) / 2].discovered = true // Set middle as discovered
             const layout: Layout = <Layout>_layout
-            specialRooms.forEach(option => { for (let i = 0; i < option.count - 1; i++) appendSpecial(layout, option.type) })
+            specialRooms.forEach(option => {
+                for (let i = 0; i < option.count - 1; i++) {
+                    appendSpecial(layout, option.type)
+                }
+            })
             resolve(layout)
         })
     })
