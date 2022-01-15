@@ -314,6 +314,10 @@ function random(min, max) {
     return (Math.random() * (max - min)) + min;
 }
 exports.random = random;
+function clamp(number, min, max) {
+    return Math.min(Math.max(number, min), max);
+}
+exports.clamp = clamp;
 class GameScene extends game_1.BaseScene {
     /* ---------------------------------- Misc ---------------------------------- */
     player;
@@ -333,14 +337,13 @@ class GameScene extends game_1.BaseScene {
     balls;
     ballId;
     /* --------------------------------- Crates --------------------------------- */
-    crates;
-    crateId;
     cratePickupSound;
     /* -------------------------------- Managers -------------------------------- */
     dungeonManager;
     map;
     /* --------------------------------- Images --------------------------------- */
     healthImage;
+    coinsImage;
     crateImage;
     frameImage;
     smallAmmoImage;
@@ -384,13 +387,12 @@ class GameScene extends game_1.BaseScene {
         this.rayId = 0;
         this.balls = [];
         this.ballId = 0;
-        this.crates = [];
-        this.crateId = 0;
         this.cratePickupSound = new sound_1.Sound("./sounds/pickupCoin.wav");
         this.dungeonManager = new roundManager_1.DungeonManager(this);
         this.map = new map_1.Map(this);
         this.healthImage = new image_1.CustomImage("./images/health.png");
         this.crateImage = new image_1.CustomImage("./images/crate.png");
+        this.coinsImage = new image_1.CustomImage("./images/coin.png");
         this.frameImage = new image_1.CustomImage("./images/guns/frame.png");
         this.smallAmmoImage = new image_1.CustomImage("./images/smallammo.png");
         this.mediumAmmoImage = new image_1.CustomImage("./images/mediumammo.png");
@@ -484,30 +486,19 @@ class GameScene extends game_1.BaseScene {
     update(dt) {
         if (this.paused)
             return;
-        // Round
-        this.dungeonManager.update();
-        // Player
+        /* -------------------------------- Universal ------------------------------- */
+        this.dungeonManager.update(dt);
         this.player.update(dt);
-        // Crates
-        this.crates.forEach(crate => crate.check());
-        // Enemies
-        this.enemies.forEach(enemy => enemy.update(dt));
-        // Bullets / rays
-        this.bullets.forEach(bullet => bullet.update(dt));
-        this.rays.forEach(ray => ray.update());
-        this.balls.forEach(ball => ball.update(dt));
-        // Animation
         this.showInventoryAnimation.update(dt);
         this.hideInventoryAnimation.update(dt);
     }
     draw(ctx) {
+        // Background
         ctx.fillStyle = "#5a6988";
         ctx.fillRect(0, 0, config_1.config.width, config_1.config.height);
-        this.crates.forEach(crate => crate.draw(ctx));
-        this.bullets.forEach(bullet => bullet.draw(ctx));
-        this.rays.forEach(ray => ray.draw(ctx));
-        this.balls.forEach(ball => ball.draw(ctx));
-        this.enemies.forEach(enemy => enemy.draw(ctx));
+        /* --------------------------------- Dungeon -------------------------------- */
+        this.dungeonManager.draw(ctx);
+        /* -------------------------------- Universal ------------------------------- */
         this.player.draw(ctx);
         (0, hud_1.drawHud)(ctx, this);
         this.map.draw(ctx);
@@ -517,12 +508,8 @@ class GameScene extends game_1.BaseScene {
     }
 }
 exports.GameScene = GameScene;
-function clamp(number, min, max) {
-    return Math.min(Math.max(number, min), max);
-}
-exports.clamp = clamp;
 
-},{"../animations":2,"../config":4,"../game":5,"../image":6,"../sound":21,"./game/map":16,"./game/player":17,"./game/roundManager":18,"./hud":19,"./shooting":20}],9:[function(require,module,exports){
+},{"../animations":2,"../config":4,"../game":5,"../image":6,"../sound":22,"./game/map":16,"./game/player":17,"./game/roundManager":19,"./hud":20,"./shooting":21}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Bullet = void 0;
@@ -584,7 +571,7 @@ class Bullet {
         ctx.shadowBlur = 5;
         ctx.shadowColor = "#000000";
         ctx.fillStyle = (this.hitPlayer) ? "#8d1b1f" : "#0000FF";
-        ctx.fillRect(this.location.x - this.width / 2, this.location.y - this.width / 2, this.width, this.height);
+        ctx.fillRect(Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.width / 2), this.width, this.height);
         ctx.shadowBlur = 0;
     }
 }
@@ -621,13 +608,16 @@ class Crate {
         this.image = image;
     }
     check() {
-        if ((0, collision_1.touches)((0, collision_1.xywdToCollisionRect)(this.game.player.location.x, this.game.player.location.y, this.game.player.width, this.game.player.height), (0, collision_1.xywdToCollisionRect)(this.location.x, this.location.y, 64, 64))) {
-            this.game.crates = this.game.crates.filter(crate => crate.id != this.id);
+        if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject !== null && (0, collision_1.touches)((0, collision_1.xywdToCollisionRect)(this.game.player.location.x, this.game.player.location.y, this.game.player.width, this.game.player.height), (0, collision_1.xywdToCollisionRect)(this.location.x, this.location.y, 64, 64))) {
+            this.game.dungeonManager.currentRoomObject.dungeonRounds.crates = this.game.dungeonManager.currentRoomObject.dungeonRounds.crates.filter(crate => crate.id != this.id);
             this.pickups.forEach(pickup => {
                 this.game.cratePickupSound.clonePlay();
                 const anyPickup = pickup;
-                if (pickup.type === "Health") {
+                if (pickup.type === "health") {
                     this.game.player.lives += pickup.amount;
+                }
+                else if (pickup.type === "coins") {
+                    this.game.player.coins += pickup.amount;
                 }
                 else if (typeof pickup.type.damage !== "undefined") {
                     let highestKey = 0;
@@ -642,17 +632,20 @@ class Crate {
         }
     }
     draw(ctx) {
-        ctx.drawImage(this.image.image, Math.round(this.location.x - 32), Math.round(this.location.y - 32));
+        ctx.drawImage(this.image.image, Math.round(this.location.x - this.image.image.width / 2), Math.round(this.location.y - this.image.image.width / 2));
     }
     /**
      * Only for **HEALTH** or **AMMO**
      */
-    static randomCrate(id, game, image) {
-        const type = (Math.random() < 0.5) ? "Health" : randomEnum(guns_1.Ammo);
+    static randomCrate(id, game) {
+        const type = (Math.random() < 0.5) ? "health" : randomEnum(guns_1.Ammo);
         return new this((0, game_1.random)(0 + 32, config_1.config.width - 32), (0, game_1.random)(0 + 32, config_1.config.height - 32), [{
                 type: type,
-                amount: (type === "Health") ? 1 : Math.round((0, game_1.random)(10, 100))
-            }], id, game, image);
+                amount: (type === "health") ? 1 : Math.round((0, game_1.random)(10, 100))
+            }], id, game, game.crateImage);
+    }
+    static coin(x, y, id, game, amount = 1) {
+        return new this(x, y, [{ type: "coins", amount: amount }], id, game, game.coinsImage);
     }
 }
 exports.Crate = Crate;
@@ -663,6 +656,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.spaceCharacter = exports.Direction = exports.printLayout = exports.fullGenerate = void 0;
 const game_1 = require("../../game");
 const game_2 = require("../game");
+const shop_1 = require("./rooms/shop");
 const roundManager_1 = require("./roundManager");
 const spaceCharacter = "0";
 exports.spaceCharacter = spaceCharacter;
@@ -913,8 +907,16 @@ function fullGenerate(game, options = { layoutSize: 7, rooms: 20 }, specialRooms
             for (let y = 0; y < layout.length; y++) {
                 for (let x = 0; x < layout[y].length; x++) {
                     const room = layout[y][x];
-                    if (room !== "0" && room.type === "dungeon")
-                        layout[y][x].dungeonRounds = new roundManager_1.RoundManager(game);
+                    if (room !== "0") {
+                        switch (room.type) {
+                            case "dungeon":
+                                layout[y][x].dungeonRounds = new roundManager_1.RoundManager(game);
+                                break;
+                            case "shop":
+                                layout[y][x].shopRoom = new shop_1.ShopRoom();
+                                break;
+                        }
+                    }
                 }
             }
             resolve(layout);
@@ -923,13 +925,14 @@ function fullGenerate(game, options = { layoutSize: 7, rooms: 20 }, specialRooms
 }
 exports.fullGenerate = fullGenerate;
 
-},{"../../game":5,"../game":8,"./roundManager":18}],12:[function(require,module,exports){
+},{"../../game":5,"../game":8,"./rooms/shop":18,"./roundManager":19}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BallEnemy = exports.Ball = void 0;
 const angles_1 = require("../../../angles");
 const config_1 = require("../../../config");
 const game_1 = require("../../game");
+const crate_1 = require("../crate");
 const rangedEnemy_1 = require("./rangedEnemy");
 function circleRect(R, Xc, Yc, X1, Y1, X2, Y2) {
     // Find the nearest point on the
@@ -1043,6 +1046,8 @@ class BallEnemy {
             // this.game.balls = this.game.balls.filter(ball => !this.balls.includes(ball.id))
             if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject.type === "dungeon") {
                 this.game.dungeonManager.currentRoomObject.dungeonRounds.enemiesKilledThisRound += 1;
+                this.game.dungeonManager.currentRoomObject.dungeonRounds.crates.push(crate_1.Crate.coin(this.location.x, this.location.y, this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId, this.game));
+                this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId += 1;
             }
             return true;
         }
@@ -1074,12 +1079,13 @@ class BallEnemy {
 }
 exports.BallEnemy = BallEnemy;
 
-},{"../../../angles":1,"../../../config":4,"../../game":8,"./rangedEnemy":13}],13:[function(require,module,exports){
+},{"../../../angles":1,"../../../config":4,"../../game":8,"../crate":10,"./rangedEnemy":13}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.findAngle = exports.lineRect = exports.lineLine = exports.Ray = exports.RangedEnemy = void 0;
 const angles_1 = require("../../../angles");
 const config_1 = require("../../../config");
+const crate_1 = require("../crate");
 /**
  * @returns point of intersection
  */
@@ -1310,6 +1316,8 @@ class RangedEnemy {
             // this.game.rays = this.game.rays.filter(ray => !this.rays.includes(ray.id))
             if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject.type === "dungeon") {
                 this.game.dungeonManager.currentRoomObject.dungeonRounds.enemiesKilledThisRound += 1;
+                this.game.dungeonManager.currentRoomObject.dungeonRounds.crates.push(crate_1.Crate.coin(this.location.x, this.location.y, this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId, this.game));
+                this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId += 1;
             }
             return true;
         }
@@ -1372,12 +1380,13 @@ function leadPlayer(x, y, player) {
     return angle;
 }
 
-},{"../../../angles":1,"../../../config":4}],14:[function(require,module,exports){
+},{"../../../angles":1,"../../../config":4,"../crate":10}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SpiralEnemy = void 0;
 const angles_1 = require("../../../angles");
 const bullet_1 = require("../bullet");
+const crate_1 = require("../crate");
 class SpiralEnemy {
     location;
     maxHealth;
@@ -1409,6 +1418,8 @@ class SpiralEnemy {
             // this.game.balls = this.game.balls.filter(ball => !this.balls.includes(ball.id))
             if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject.type === "dungeon") {
                 this.game.dungeonManager.currentRoomObject.dungeonRounds.enemiesKilledThisRound += 1;
+                this.game.dungeonManager.currentRoomObject.dungeonRounds.crates.push(crate_1.Crate.coin(this.location.x, this.location.y, this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId, this.game));
+                this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId += 1;
             }
             return true;
         }
@@ -1442,7 +1453,7 @@ class SpiralEnemy {
 }
 exports.SpiralEnemy = SpiralEnemy;
 
-},{"../../../angles":1,"../bullet":9}],15:[function(require,module,exports){
+},{"../../../angles":1,"../bullet":9,"../crate":10}],15:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.guns = exports.the360 = exports.shotgun = exports.sniper = exports.ak47 = exports.smg = exports.pistol = exports.Ammo = void 0;
@@ -1531,7 +1542,7 @@ exports.the360 = the360;
 const guns = [pistol, smg, ak47, sniper, shotgun, the360];
 exports.guns = guns;
 
-},{"../../image":6,"../../sound":21}],16:[function(require,module,exports){
+},{"../../image":6,"../../sound":22}],16:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Map = void 0;
@@ -1557,7 +1568,7 @@ class Map {
         if (this.game.dungeonManager.layout === null)
             return;
         ctx.fillStyle = (room.type === "chest") ? "#F39503" : (room.type === "shop") ? "#00FF00" : (room.type === "end") ? "#FFFF00" : "#FF0000";
-        const roomSize = 64;
+        const roomSize = 32;
         const roomMargin = 10;
         const roomXOffset = (room.x - ((this.game.dungeonManager.layout.length - 1) / 2));
         const roomYOffset = (((this.game.dungeonManager.layout.length - 1) / 2) - room.y);
@@ -1572,27 +1583,23 @@ class Map {
             ctx.beginPath();
             ctx.arc(roomX, roomY, 2, 0, 2 * Math.PI);
             ctx.stroke();
-            ctx.shadowBlur = 0;
         }
+        ctx.shadowBlur = 0;
         // Tunnels
         ctx.fillStyle = "#00FFFF";
         const tunnelSize = roomMargin;
         room.direction.forEach(direction => {
             switch (direction) {
                 case dungeonGenerator_1.Direction.up:
-                    // ctx.fillStyle = "#00FFFF"
                     ctx.fillRect(roomX - tunnelSize, roomY - roomSize / 2 - tunnelSize, tunnelSize * 2, tunnelSize);
                     break;
                 case dungeonGenerator_1.Direction.down:
-                    // ctx.fillStyle = "#FFFF00"
                     ctx.fillRect(roomX - tunnelSize, roomY + roomSize / 2, tunnelSize * 2, tunnelSize);
                     break;
                 case dungeonGenerator_1.Direction.left:
-                    // ctx.fillStyle = "#FF00FF"
                     ctx.fillRect(roomX - roomSize / 2 - tunnelSize, roomY - tunnelSize / 2, tunnelSize, tunnelSize * 2);
                     break;
                 case dungeonGenerator_1.Direction.right:
-                    // ctx.fillStyle = "#5920F0"
                     ctx.fillRect(roomX + roomSize / 2, roomY - tunnelSize / 2, tunnelSize, tunnelSize * 2);
                     break;
             }
@@ -1671,6 +1678,10 @@ class Map {
                 this.mapNavigator = false;
             }, 1000);
         }
+        // Reset game
+        this.game.bullets = [];
+        this.game.balls = [];
+        this.game.rays = [];
         this.game.dungeonManager.currentRoom.x += hspd;
         this.game.dungeonManager.currentRoom.y += vspd;
     }
@@ -1706,6 +1717,7 @@ class Player {
     vspd;
     image;
     dashingImage;
+    coins;
     dashing;
     dashAngle;
     dashDelay;
@@ -1732,6 +1744,7 @@ class Player {
         this.vspd = 0;
         this.image = new image_1.CustomImage("./images/skins/player.png");
         this.dashingImage = new image_1.CustomImage("./images/skins/playerDashing.png");
+        this.coins = 0;
         this.dashing = false;
         this.dashAngle = 0;
         this.dashDelay = 750;
@@ -1826,28 +1839,6 @@ class Player {
         ctx.shadowBlur = 0;
     }
     update(dt) {
-        // if (this.dashing) {
-        //     const movePerFrame = ((this.dashDistance) / (this.dashLength)) * dt
-        //     this.dashFrame += 1 * dt
-        //     const location = project({
-        //         x: this.x,
-        //         y: this.y
-        //     }, this.dashAngle, movePerFrame)
-        //     this.x = location.x
-        //     this.y = location.y
-        //     // Dash collision
-        //     if (this.x > config.width || this.x < 0) {
-        //         this.x = (this.x < config.width / 2) ? this.width / 2 : config.width - this.width / 2
-        //         this.dashing = false
-        //     }
-        //     if (this.y > config.height || this.y < 0) {
-        //         this.y = (this.y < config.height / 2) ? this.height / 2 : config.height - this.height / 2
-        //         this.dashing = false
-        //     }
-        //     if (this.dashFrame >= this.dashLength) {
-        //         this.dashing = false
-        //     }
-        // }
         this.dashAnimation.update(dt);
     }
     processInput(events, pressedKeys, dt) {
@@ -1948,7 +1939,23 @@ class Player {
 }
 exports.Player = Player;
 
-},{"../../angles":1,"../../animations":2,"../../config":4,"../../image":6,"../../sound":21,"./guns":15}],18:[function(require,module,exports){
+},{"../../angles":1,"../../animations":2,"../../config":4,"../../image":6,"../../sound":22,"./guns":15}],18:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ShopRoom = void 0;
+class ShopRoom {
+    constructor() {
+    }
+    update() {
+    }
+    draw(ctx) {
+        ctx.fillStyle = "#049301";
+        ctx.fillRect(100, 100, 100, 100);
+    }
+}
+exports.ShopRoom = ShopRoom;
+
+},{}],19:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DungeonManager = exports.RoundManager = void 0;
@@ -1972,7 +1979,9 @@ class DungeonManager {
             return null;
         return this._layout[this.currentRoom.y][this.currentRoom.x];
     }
+    game;
     constructor(game) {
+        this.game = game;
         (0, dungeonGenerator_1.fullGenerate)(game, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }, { type: "chest", count: 3 }]).then(layout => {
             this._layout = layout;
             this.currentRoom = { x: (layout.length - 1) / 2, y: (layout.length - 1) / 2 };
@@ -1981,9 +1990,36 @@ class DungeonManager {
             }, 1000);
         });
     }
-    update() {
-        if (this.currentRoomObject !== "0" && this.currentRoomObject !== null && this.currentRoomObject.type === "dungeon") {
-            this.currentRoomObject.dungeonRounds.update();
+    update(dt) {
+        if (this.currentRoomObject !== "0" && this.currentRoomObject !== null) {
+            switch (this.currentRoomObject.type) {
+                case "dungeon":
+                    this.currentRoomObject.dungeonRounds.update();
+                    this.game.enemies.forEach(enemy => enemy.update(dt));
+                    this.game.bullets.forEach(bullet => bullet.update(dt));
+                    this.game.rays.forEach(ray => ray.update());
+                    this.game.balls.forEach(ball => ball.update(dt));
+                    break;
+                case "shop":
+                    this.currentRoomObject.shopRoom.update();
+                    break;
+            }
+        }
+    }
+    draw(ctx) {
+        if (this.currentRoomObject !== "0" && this.currentRoomObject !== null) {
+            switch (this.currentRoomObject.type) {
+                case "dungeon":
+                    this.currentRoomObject.dungeonRounds.crates.forEach(crate => crate.draw(ctx));
+                    this.game.bullets.forEach(bullet => bullet.draw(ctx));
+                    this.game.rays.forEach(ray => ray.draw(ctx));
+                    this.game.balls.forEach(ball => ball.draw(ctx));
+                    this.game.enemies.forEach(enemy => enemy.draw(ctx));
+                    break;
+                case "shop":
+                    this.currentRoomObject.shopRoom.draw(ctx);
+                    break;
+            }
         }
     }
 }
@@ -1998,9 +2034,13 @@ class RoundManager {
     game;
     lastEnemySpawn;
     lastCrateSpawn;
+    crates;
+    crateId;
     constructor(game) {
         this.active = false;
         this.cleared = false;
+        this.crates = [];
+        this.crateId = 0;
         this.rounds = [];
         for (let i = 0; i < 1; i++) {
             this.rounds[i] = {
@@ -2019,16 +2059,15 @@ class RoundManager {
         this.lastCrateSpawn = this.game.getTicks();
     }
     update() {
+        this.crates.forEach(crate => crate.check());
         if (!this.active)
             return;
         if (this.enemiesKilledThisRound >= this.rounds[this.round].enemies) {
             this.round += 1;
             this.enemiesKilledThisRound = 0;
             this.game.enemies = [];
-            this.game.crates = [];
         }
         if (this.round > this.rounds.length - 1) {
-            console.log("Finished!");
             this.active = false;
             this.cleared = true;
             return;
@@ -2078,16 +2117,16 @@ class RoundManager {
             this.game.enemies.push(new (enemy)(x, y, this.game.enemyId, this.game));
             this.game.enemyId += 1;
         }
-        if (this.game.getTicks() >= this.lastCrateSpawn + round.crateSpawnDelay && this.game.crates.length < round.maxCrates) {
+        if (this.game.getTicks() >= this.lastCrateSpawn + round.crateSpawnDelay && this.crates.length < round.maxCrates) {
             this.lastCrateSpawn = this.game.getTicks();
-            this.game.crates.push(crate_1.Crate.randomCrate(this.game.crateId, this.game, this.game.crateImage));
-            this.game.crateId += 1;
+            this.crates.push(crate_1.Crate.randomCrate(this.crateId, this.game));
+            this.crateId += 1;
         }
     }
 }
 exports.RoundManager = RoundManager;
 
-},{"../../config":4,"../game":8,"./crate":10,"./dungeonGenerator":11,"./enemies/ballEnemy":12,"./enemies/rangedEnemy":13,"./enemies/spiralEnemy":14}],19:[function(require,module,exports){
+},{"../../config":4,"../game":8,"./crate":10,"./dungeonGenerator":11,"./enemies/ballEnemy":12,"./enemies/rangedEnemy":13,"./enemies/spiralEnemy":14}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.margin = exports.drawHud = void 0;
@@ -2133,6 +2172,13 @@ function drawHud(ctx, game) {
     ctx.fillStyle = "#FFFFFF";
     ctx.shadowColor = "#000000";
     ctx.fillText(game.player.lives.toString(), margin * 2 + 32, margin + 16);
+    /* ---------------------------------- Coins --------------------------------- */
+    ctx.shadowColor = "#FFDF00";
+    ctx.drawImage(game.coinsImage.image, margin, margin * 2 + 32);
+    ctx.font = "20px serif";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.shadowColor = "#000000";
+    ctx.fillText(game.player.coins.toString(), margin * 2 + 32, margin * 2 + 32 + 16);
     /* ------------------------------ Gun selector ------------------------------ */
     ctx.shadowBlur = 2;
     ctx.drawImage(game.frameImage.image, margin, config_1.config.height - (32 * 4 + margin));
@@ -2180,7 +2226,7 @@ function drawHud(ctx, game) {
 }
 exports.drawHud = drawHud;
 
-},{"../config":4,"./game":8,"./game/guns":15}],20:[function(require,module,exports){
+},{"../config":4,"./game":8,"./game/guns":15}],21:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.shooting = void 0;
@@ -2204,7 +2250,7 @@ function shooting(game) {
 }
 exports.shooting = shooting;
 
-},{"../angles":1,"./game/bullet":9}],21:[function(require,module,exports){
+},{"../angles":1,"./game/bullet":9}],22:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.volume = exports.Sound = void 0;

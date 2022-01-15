@@ -24,7 +24,7 @@ class Map {
         if (this.game.dungeonManager.layout === null) return
 
         ctx.fillStyle = (room.type === "chest") ? "#F39503" : (room.type === "shop") ? "#00FF00" : (room.type === "end") ? "#FFFF00" : "#FF0000"
-        const roomSize = 64
+        const roomSize = 32
         const roomMargin = 10
         const roomXOffset = (room.x - ((this.game.dungeonManager.layout.length - 1) / 2))
         const roomYOffset = (((this.game.dungeonManager.layout.length - 1) / 2) - room.y)
@@ -43,8 +43,8 @@ class Map {
             ctx.beginPath()
             ctx.arc(roomX, roomY, 2, 0, 2 * Math.PI)
             ctx.stroke()
-            ctx.shadowBlur = 0
         }
+        ctx.shadowBlur = 0
 
         // Tunnels
         ctx.fillStyle = "#00FFFF"
@@ -52,19 +52,15 @@ class Map {
         room.direction.forEach(direction => {
             switch (direction) {
                 case Direction.up:
-                    // ctx.fillStyle = "#00FFFF"
                     ctx.fillRect(roomX - tunnelSize, roomY - roomSize / 2 - tunnelSize, tunnelSize * 2, tunnelSize)
                     break
                 case Direction.down:
-                    // ctx.fillStyle = "#FFFF00"
                     ctx.fillRect(roomX - tunnelSize, roomY + roomSize / 2, tunnelSize * 2, tunnelSize)
                     break
                 case Direction.left:
-                    // ctx.fillStyle = "#FF00FF"
                     ctx.fillRect(roomX - roomSize / 2 - tunnelSize, roomY - tunnelSize / 2, tunnelSize, tunnelSize * 2)
                     break
                 case Direction.right:
-                    // ctx.fillStyle = "#5920F0"
                     ctx.fillRect(roomX + roomSize / 2, roomY - tunnelSize / 2, tunnelSize, tunnelSize * 2)
                     break
             }
@@ -137,6 +133,11 @@ class Map {
                 this.mapNavigator = false
             }, 1000)
         }
+
+        // Reset game
+        this.game.bullets = []
+        this.game.balls = []
+        this.game.rays = []
 
         this.game.dungeonManager.currentRoom.x += hspd
         this.game.dungeonManager.currentRoom.y += vspd

@@ -68,6 +68,14 @@ function drawHud(ctx: CanvasRenderingContext2D, game: GameScene) {
     ctx.shadowColor = "#000000"
     ctx.fillText(game.player.lives.toString(), margin * 2 + 32, margin + 16)
 
+    /* ---------------------------------- Coins --------------------------------- */
+    ctx.shadowColor = "#FFDF00"
+    ctx.drawImage(game.coinsImage.image, margin, margin * 2 + 32)
+    ctx.font = "20px serif"
+    ctx.fillStyle = "#FFFFFF"
+    ctx.shadowColor = "#000000"
+    ctx.fillText(game.player.coins.toString(), margin * 2 + 32, margin * 2 + 32 + 16)
+
     /* ------------------------------ Gun selector ------------------------------ */
     ctx.shadowBlur = 2
     ctx.drawImage(game.frameImage.image, margin, config.height - (32 * 4 + margin))

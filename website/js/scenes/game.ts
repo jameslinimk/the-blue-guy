@@ -5,7 +5,6 @@ import { BaseScene, Events, KeyDownEvent, MouseDownEvent, MouseMoveEvent, Presse
 import { CustomImage } from "../image"
 import { Sound } from "../sound"
 import { Bullet } from "./game/bullet"
-import { Crate } from "./game/crate"
 import { Ball } from "./game/enemies/ballEnemy"
 import { Enemy } from "./game/enemies/enemy"
 import { Ray } from "./game/enemies/rangedEnemy"
@@ -17,6 +16,10 @@ import { shooting } from "./shooting"
 
 function random(min: number, max: number) {
     return (Math.random() * (max - min)) + min
+}
+
+function clamp(number: number, min: number, max: number) {
+    return Math.min(Math.max(number, min), max)
 }
 
 class GameScene extends BaseScene {
@@ -41,8 +44,6 @@ class GameScene extends BaseScene {
     ballId: number
 
     /* --------------------------------- Crates --------------------------------- */
-    crates: Crate[]
-    crateId: number
     cratePickupSound: Sound
 
     /* -------------------------------- Managers -------------------------------- */
@@ -51,8 +52,8 @@ class GameScene extends BaseScene {
 
     /* --------------------------------- Images --------------------------------- */
     healthImage: CustomImage
+    coinsImage: CustomImage
     crateImage: CustomImage
-
     frameImage: CustomImage
     smallAmmoImage: CustomImage
     mediumAmmoImage: CustomImage
@@ -102,8 +103,6 @@ class GameScene extends BaseScene {
         this.balls = []
         this.ballId = 0
 
-        this.crates = []
-        this.crateId = 0
         this.cratePickupSound = new Sound("./sounds/pickupCoin.wav")
 
         this.dungeonManager = new DungeonManager(this)
@@ -111,7 +110,7 @@ class GameScene extends BaseScene {
 
         this.healthImage = new CustomImage("./images/health.png")
         this.crateImage = new CustomImage("./images/crate.png")
-
+        this.coinsImage = new CustomImage("./images/coin.png")
         this.frameImage = new CustomImage("./images/guns/frame.png")
         this.smallAmmoImage = new CustomImage("./images/smallammo.png")
         this.mediumAmmoImage = new CustomImage("./images/mediumammo.png")
@@ -213,37 +212,22 @@ class GameScene extends BaseScene {
     update(dt: number) {
         if (this.paused) return
 
-        // Round
-        this.dungeonManager.update()
-
-        // Player
+        /* -------------------------------- Universal ------------------------------- */
+        this.dungeonManager.update(dt)
         this.player.update(dt)
-
-        // Crates
-        this.crates.forEach(crate => crate.check())
-
-        // Enemies
-        this.enemies.forEach(enemy => enemy.update(dt))
-
-        // Bullets / rays
-        this.bullets.forEach(bullet => bullet.update(dt))
-        this.rays.forEach(ray => ray.update())
-        this.balls.forEach(ball => ball.update(dt))
-
-        // Animation
         this.showInventoryAnimation.update(dt)
         this.hideInventoryAnimation.update(dt)
     }
 
     draw(ctx: CanvasRenderingContext2D) {
+        // Background
         ctx.fillStyle = "#5a6988"
         ctx.fillRect(0, 0, config.width, config.height)
 
-        this.crates.forEach(crate => crate.draw(ctx))
-        this.bullets.forEach(bullet => bullet.draw(ctx))
-        this.rays.forEach(ray => ray.draw(ctx))
-        this.balls.forEach(ball => ball.draw(ctx))
-        this.enemies.forEach(enemy => enemy.draw(ctx))
+        /* --------------------------------- Dungeon -------------------------------- */
+        this.dungeonManager.draw(ctx)
+
+        /* -------------------------------- Universal ------------------------------- */
         this.player.draw(ctx)
         drawHud(ctx, this)
         this.map.draw(ctx)
@@ -252,10 +236,6 @@ class GameScene extends BaseScene {
     getTicks() {
         return performance.now()
     }
-}
-
-function clamp(number: number, min: number, max: number) {
-    return Math.min(Math.max(number, min), max)
 }
 
 export {

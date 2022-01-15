@@ -1,6 +1,7 @@
 import { Coordinates } from "../../angles"
 import { wait } from "../../game"
 import { GameScene, random } from "../game"
+import { ShopRoom } from "./rooms/shop"
 import { RoundManager } from "./roundManager"
 
 const spaceCharacter = "0"
@@ -11,11 +12,12 @@ type RoomType = "dungeon" | "shop" | "chest" | "end"
 interface Room {
     type: RoomType
     dungeonRounds?: RoundManager
+    shopRoom?: ShopRoom
     x: number
     y: number
     direction: Direction[]
     discovered: boolean
-} // TODO: broken? X and Y values seem to be switched. Quick fix: redefine room.x and room.y at the end
+}
 type Layout = (Room | "0")[][]
 
 function generateRoom(layout: Layout, lastRoom: Coordinates, game: GameScene) {
@@ -260,7 +262,16 @@ function fullGenerate(game: GameScene, options: { layoutSize: number, rooms: num
             for (let y = 0; y < layout.length; y++) {
                 for (let x = 0; x < layout[y].length; x++) {
                     const room = layout[y][x]
-                    if (room !== "0" && room.type === "dungeon") (<Room>layout[y][x]).dungeonRounds = new RoundManager(game)
+                    if (room !== "0") {
+                        switch (room.type) {
+                            case "dungeon":
+                                (<Room>layout[y][x]).dungeonRounds = new RoundManager(game)
+                                break
+                            case "shop":
+                                (<Room>layout[y][x]).shopRoom = new ShopRoom()
+                                break
+                        }
+                    }
                 }
             }
             resolve(layout)

@@ -67,7 +67,7 @@ class Bullet {
         ctx.shadowBlur = 5
         ctx.shadowColor = "#000000"
         ctx.fillStyle = (this.hitPlayer) ? "#8d1b1f" : "#0000FF"
-        ctx.fillRect(this.location.x - this.width / 2, this.location.y - this.width / 2, this.width, this.height)
+        ctx.fillRect(Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.width / 2), this.width, this.height)
         ctx.shadowBlur = 0
     }
 }

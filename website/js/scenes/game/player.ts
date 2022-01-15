@@ -47,6 +47,8 @@ class Player {
     image: CustomImage
     dashingImage: CustomImage
 
+    coins: number
+
     dashing: boolean
 
     dashAngle: number
@@ -78,6 +80,8 @@ class Player {
         this.vspd = 0
         this.image = new CustomImage("./images/skins/player.png")
         this.dashingImage = new CustomImage("./images/skins/playerDashing.png")
+
+        this.coins = 0
 
         this.dashing = false
         this.dashAngle = 0
@@ -185,30 +189,6 @@ class Player {
     }
 
     update(dt: number) {
-        // if (this.dashing) {
-        //     const movePerFrame = ((this.dashDistance) / (this.dashLength)) * dt
-        //     this.dashFrame += 1 * dt
-        //     const location = project({
-        //         x: this.x,
-        //         y: this.y
-        //     }, this.dashAngle, movePerFrame)
-        //     this.x = location.x
-        //     this.y = location.y
-
-        //     // Dash collision
-        //     if (this.x > config.width || this.x < 0) {
-        //         this.x = (this.x < config.width / 2) ? this.width / 2 : config.width - this.width / 2
-        //         this.dashing = false
-        //     }
-        //     if (this.y > config.height || this.y < 0) {
-        //         this.y = (this.y < config.height / 2) ? this.height / 2 : config.height - this.height / 2
-        //         this.dashing = false
-        //     }
-
-        //     if (this.dashFrame >= this.dashLength) {
-        //         this.dashing = false
-        //     }
-        // }
         this.dashAnimation.update(dt)
     }
 

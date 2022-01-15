@@ -20,8 +20,10 @@ class DungeonManager {
         if (this._layout === undefined || this.currentRoom === undefined) return null
         return this._layout[this.currentRoom.y][this.currentRoom.x]
     }
+    game: GameScene
 
     constructor(game: GameScene) {
+        this.game = game
         fullGenerate(game, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }, { type: "chest", count: 3 }]).then(layout => {
             this._layout = layout
             this.currentRoom = { x: (layout.length - 1) / 2, y: (layout.length - 1) / 2 }
@@ -31,9 +33,37 @@ class DungeonManager {
         })
     }
 
-    update() {
-        if (this.currentRoomObject !== "0" && this.currentRoomObject !== null && this.currentRoomObject.type === "dungeon") {
-            this.currentRoomObject.dungeonRounds.update()
+    update(dt: number) {
+        if (this.currentRoomObject !== "0" && this.currentRoomObject !== null) {
+            switch (this.currentRoomObject.type) {
+                case "dungeon":
+                    this.currentRoomObject.dungeonRounds.update()
+                    this.game.enemies.forEach(enemy => enemy.update(dt))
+                    this.game.bullets.forEach(bullet => bullet.update(dt))
+                    this.game.rays.forEach(ray => ray.update())
+                    this.game.balls.forEach(ball => ball.update(dt))
+                    break
+                case "shop":
+                    this.currentRoomObject.shopRoom.update()
+                    break
+            }
+        }
+    }
+
+    draw(ctx: CanvasRenderingContext2D) {
+        if (this.currentRoomObject !== "0" && this.currentRoomObject !== null) {
+            switch (this.currentRoomObject.type) {
+                case "dungeon":
+                    this.currentRoomObject.dungeonRounds.crates.forEach(crate => crate.draw(ctx))
+                    this.game.bullets.forEach(bullet => bullet.draw(ctx))
+                    this.game.rays.forEach(ray => ray.draw(ctx))
+                    this.game.balls.forEach(ball => ball.draw(ctx))
+                    this.game.enemies.forEach(enemy => enemy.draw(ctx))
+                    break
+                case "shop":
+                    this.currentRoomObject.shopRoom.draw(ctx)
+                    break
+            }
         }
     }
 }
@@ -60,9 +90,15 @@ class RoundManager {
     lastEnemySpawn: number
     lastCrateSpawn: number
 
+    crates: Crate[]
+    crateId: number
+
     constructor(game: GameScene) {
         this.active = false
         this.cleared = false
+
+        this.crates = []
+        this.crateId = 0
 
         this.rounds = []
         for (let i = 0; i < 1; i++) {
@@ -85,17 +121,17 @@ class RoundManager {
     }
 
     update() {
+        this.crates.forEach(crate => crate.check())
+
         if (!this.active) return
 
         if (this.enemiesKilledThisRound >= this.rounds[this.round].enemies) {
             this.round += 1
             this.enemiesKilledThisRound = 0
             this.game.enemies = []
-            this.game.crates = []
         }
 
         if (this.round > this.rounds.length - 1) {
-            console.log("Finished!")
             this.active = false
             this.cleared = true
             return
@@ -149,10 +185,10 @@ class RoundManager {
             this.game.enemyId += 1
         }
 
-        if (this.game.getTicks() >= this.lastCrateSpawn + round.crateSpawnDelay && this.game.crates.length < round.maxCrates) {
+        if (this.game.getTicks() >= this.lastCrateSpawn + round.crateSpawnDelay && this.crates.length < round.maxCrates) {
             this.lastCrateSpawn = this.game.getTicks()
-            this.game.crates.push(Crate.randomCrate(this.game.crateId, this.game, this.game.crateImage))
-            this.game.crateId += 1
+            this.crates.push(Crate.randomCrate(this.crateId, this.game))
+            this.crateId += 1
         }
     }
 }
