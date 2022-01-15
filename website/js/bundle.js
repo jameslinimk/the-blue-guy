@@ -305,7 +305,6 @@ const config_1 = require("../config");
 const game_1 = require("../game");
 const image_1 = require("../image");
 const sound_1 = require("../sound");
-const dungeonGenerator_1 = require("./game/dungeonGenerator");
 const map_1 = require("./game/map");
 const player_1 = require("./game/player");
 const roundManager_1 = require("./game/roundManager");
@@ -470,11 +469,6 @@ class GameScene extends game_1.BaseScene {
                             }
                             this.map.mapNavigator = !this.map.mapNavigator;
                             break;
-                        case "g":
-                            (0, dungeonGenerator_1.fullGenerate)(this, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }]).then(layout => {
-                                this.dungeonManager.layout = layout;
-                            });
-                            break;
                         case "p":
                             console.log("Pause");
                             this.paused = !this.paused;
@@ -528,7 +522,7 @@ function clamp(number, min, max) {
 }
 exports.clamp = clamp;
 
-},{"../animations":2,"../config":4,"../game":5,"../image":6,"../sound":21,"./game/dungeonGenerator":11,"./game/map":16,"./game/player":17,"./game/roundManager":18,"./hud":19,"./shooting":20}],9:[function(require,module,exports){
+},{"../animations":2,"../config":4,"../game":5,"../image":6,"../sound":21,"./game/map":16,"./game/player":17,"./game/roundManager":18,"./hud":19,"./shooting":20}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Bullet = void 0;

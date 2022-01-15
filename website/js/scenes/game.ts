@@ -6,7 +6,6 @@ import { CustomImage } from "../image"
 import { Sound } from "../sound"
 import { Bullet } from "./game/bullet"
 import { Crate } from "./game/crate"
-import { fullGenerate } from "./game/dungeonGenerator"
 import { Ball } from "./game/enemies/ballEnemy"
 import { Enemy } from "./game/enemies/enemy"
 import { Ray } from "./game/enemies/rangedEnemy"
@@ -197,11 +196,6 @@ class GameScene extends BaseScene {
                                 break
                             }
                             this.map.mapNavigator = !this.map.mapNavigator
-                            break
-                        case "g":
-                            fullGenerate(this, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }]).then(layout => {
-                                this.dungeonManager.layout = layout
-                            })
                             break
                         case "p":
                             console.log("Pause")
