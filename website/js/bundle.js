@@ -137,12 +137,36 @@ exports.config = config;
 "use strict";
 // Key keeper
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.wait = exports.play = exports.BaseScene = void 0;
+exports.detectMobile = exports.wait = exports.play = exports.BaseScene = void 0;
 const pressedKeys = new Map();
 let eventQueue = [];
 // EVENTS
 // Prevent multiple keydown:
 const alreadyFired = new Map();
+document.ontouchstart = (event) => {
+    eventQueue.push({
+        eventType: "TouchStart",
+        raw: event
+    });
+};
+document.ontouchmove = (event) => {
+    eventQueue.push({
+        eventType: "TouchMove",
+        raw: event
+    });
+};
+document.ontouchend = (event) => {
+    eventQueue.push({
+        eventType: "TouchEnd",
+        raw: event
+    });
+};
+document.ontouchcancel = (event) => {
+    eventQueue.push({
+        eventType: "TouchCancel",
+        raw: event
+    });
+};
 document.onkeydown = (event) => {
     if (!alreadyFired.get(event.code)) {
         alreadyFired.set(event.code, true);
@@ -189,6 +213,14 @@ document.onmouseup = (event) => {
  */
 const wait = (time) => new Promise((resolve, _) => setTimeout(resolve, time));
 exports.wait = wait;
+function detectMobile() {
+    const a = (navigator.userAgent || navigator.vendor || window.opera);
+    if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(a) || /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0, 4))) {
+        return true;
+    }
+    return false;
+}
+exports.detectMobile = detectMobile;
 /**
  * Start the game
  */
@@ -294,6 +326,9 @@ if (canvas.width != config_1.config.width)
     throw new Error("Canvas \"game\" width doesn't match the config!");
 if (canvas.height != config_1.config.height)
     throw new Error("Canvas \"game\" height doesn't match the config!");
+console.log((0, game_1.detectMobile)());
+if ((0, game_1.detectMobile)())
+    alert("A mobile device has been detected. This game requires a keyboard to move. Touch to shoot is available, but not recommended.");
 (0, game_1.play)(new game_2.GameScene(), config_1.config.fps, canvas);
 
 },{"./config":4,"./game":5,"./scenes/game":8}],8:[function(require,module,exports){
@@ -351,6 +386,8 @@ class GameScene extends game_1.BaseScene {
     largeAmmoImage;
     shellsAmmoImage;
     rangedEnemyImage;
+    shopGuyImage;
+    dummyImage;
     /* -------------------------------- Inventory ------------------------------- */
     showInventory;
     showInventoryX;
@@ -399,6 +436,8 @@ class GameScene extends game_1.BaseScene {
         this.largeAmmoImage = new image_1.CustomImage("./images/largeammo.png");
         this.shellsAmmoImage = new image_1.CustomImage("./images/shellsammo.png");
         this.rangedEnemyImage = new image_1.CustomImage("./images/skins/rangedEnemy.png");
+        this.shopGuyImage = new image_1.CustomImage('./images/skins/shopGuy.png');
+        this.dummyImage = new image_1.CustomImage('./images/skins/dummy.png');
         this.showInventory = false;
         this.showInventoryX = config_1.config.width - hud_1.margin;
         this.showInventoryAnimation = new animations_1.CustomAnimation(250, 64, (movePerFrame) => {
@@ -656,6 +695,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.spaceCharacter = exports.Direction = exports.printLayout = exports.fullGenerate = void 0;
 const game_1 = require("../../game");
 const game_2 = require("../game");
+const guns_1 = require("./guns");
 const shop_1 = require("./rooms/shop");
 const roundManager_1 = require("./roundManager");
 const spaceCharacter = "0";
@@ -913,7 +953,10 @@ function fullGenerate(game, options = { layoutSize: 7, rooms: 20 }, specialRooms
                                 layout[y][x].dungeonRounds = new roundManager_1.RoundManager(game);
                                 break;
                             case "shop":
-                                layout[y][x].shopRoom = new shop_1.ShopRoom();
+                                layout[y][x].shopRoom = new shop_1.ShopRoom([
+                                    { item: { type: guns_1.the360, amount: 1 }, cost: 5 },
+                                    { item: { type: guns_1.pistol, amount: 1 }, cost: 5 }
+                                ], game);
                                 break;
                         }
                     }
@@ -925,7 +968,7 @@ function fullGenerate(game, options = { layoutSize: 7, rooms: 20 }, specialRooms
 }
 exports.fullGenerate = fullGenerate;
 
-},{"../../game":5,"../game":8,"./rooms/shop":18,"./roundManager":19}],12:[function(require,module,exports){
+},{"../../game":5,"../game":8,"./guns":15,"./rooms/shop":18,"./roundManager":19}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BallEnemy = exports.Ball = void 0;
@@ -1943,19 +1986,66 @@ exports.Player = Player;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ShopRoom = void 0;
+const config_1 = require("../../../config");
+const guns_1 = require("../guns");
 class ShopRoom {
-    constructor() {
+    items;
+    game;
+    constructor(items, game) {
+        this.items = items;
+        this.game = game;
     }
     update() {
     }
     draw(ctx) {
-        ctx.fillStyle = "#049301";
-        ctx.fillRect(100, 100, 100, 100);
+        let totalWidth = 0;
+        for (let i = 0; i < this.items.length; i++)
+            totalWidth += 50 * i + 10 * i;
+        for (let i = 0; i < this.items.length; i++) {
+            /* ---------------------------- Setting the image --------------------------- */
+            let image;
+            const item = this.items[i];
+            if (item.item.type === "health") {
+                image = this.game.healthImage.image;
+            }
+            else if (item.item.type === "coins") {
+                image = this.game.coinsImage.image;
+            }
+            else if (typeof item.item.type.damage !== "undefined") {
+                image = item.item.type.image.image;
+            }
+            else {
+                switch (item.item.type) {
+                    case guns_1.Ammo.small:
+                        image = this.game.smallAmmoImage.image;
+                        break;
+                    case guns_1.Ammo.medium:
+                        image = this.game.mediumAmmoImage.image;
+                        break;
+                    case guns_1.Ammo.large:
+                        image = this.game.largeAmmoImage.image;
+                        break;
+                    case guns_1.Ammo.shell:
+                        image = this.game.shellsAmmoImage.image;
+                        break;
+                }
+            }
+            /* ------------------------------- Background ------------------------------- */
+            ctx.fillStyle = "#049301";
+            ctx.fillRect((config_1.config.width / 2 + 50 * i + 10 * i) - totalWidth / 2, 200, 50, 50);
+            ctx.fillStyle = "#C0C0C0";
+            ctx.drawImage(this.game.frameImage.image, (config_1.config.width / 2 + 50 * i + 10 * i) - totalWidth / 2 + 16, 200 - 16, 32, 32);
+            ctx.drawImage(image, (config_1.config.width / 2 + 50 * i + 10 * i) - totalWidth / 2 + 16, 200 - 16, 32, 32);
+        }
+        /* -------------------------------- Shop guy -------------------------------- */
+        ctx.drawImage(this.game.shopGuyImage.image, (config_1.config.width / 2 + 50 * this.items.length + 10 * this.items.length) - totalWidth / 2 + 32, 200 - 32);
+        /* ------------------------------ Target dummy ------------------------------ */
+        ctx.drawImage(this.game.dummyImage.image, config_1.config.width - 100, config_1.config.height - 100);
     }
 }
 exports.ShopRoom = ShopRoom;
 
-},{}],19:[function(require,module,exports){
+},{"../../../config":4,"../guns":15}],19:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DungeonManager = exports.RoundManager = void 0;
@@ -2002,6 +2092,7 @@ class DungeonManager {
                     break;
                 case "shop":
                     this.currentRoomObject.shopRoom.update();
+                    this.game.bullets.forEach(bullet => bullet.update(dt));
                     break;
             }
         }
@@ -2205,7 +2296,6 @@ function drawHud(ctx, game) {
         ctx.font = "20px serif";
         ctx.fillStyle = "#FFFFFF";
         ctx.fillText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`, config_1.config.width - ctx.measureText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`).width - margin, margin + 16);
-        ctx.shadowBlur = 0;
     }
     /* ----------------------------- System messages ---------------------------- */
     ctx.font = "20px verdana";
@@ -2223,6 +2313,7 @@ function drawHud(ctx, game) {
     }
     if (removedMessages.length > 0)
         game.systemMessages = game.systemMessages.filter(msg => !removedMessages.includes(msg.id));
+    ctx.shadowBlur = 0;
 }
 exports.drawHud = drawHud;
 

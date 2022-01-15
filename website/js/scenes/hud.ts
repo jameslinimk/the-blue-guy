@@ -105,7 +105,6 @@ function drawHud(ctx: CanvasRenderingContext2D, game: GameScene) {
         ctx.font = "20px serif"
         ctx.fillStyle = "#FFFFFF"
         ctx.fillText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`, config.width - ctx.measureText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`).width - margin, margin + 16)
-        ctx.shadowBlur = 0
     }
 
     /* ----------------------------- System messages ---------------------------- */
@@ -124,6 +123,7 @@ function drawHud(ctx: CanvasRenderingContext2D, game: GameScene) {
         ctx.fillText(systemMessage.message, config.width / 2 - ctx.measureText(systemMessage.message).width / 2, margin * 2 + 20 * i)
     }
     if (removedMessages.length > 0) game.systemMessages = game.systemMessages.filter(msg => !removedMessages.includes(msg.id))
+    ctx.shadowBlur = 0
 }
 
 export {

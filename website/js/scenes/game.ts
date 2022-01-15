@@ -60,6 +60,8 @@ class GameScene extends BaseScene {
     largeAmmoImage: CustomImage
     shellsAmmoImage: CustomImage
     rangedEnemyImage: CustomImage
+    shopGuyImage: CustomImage
+    dummyImage: CustomImage
 
     /* -------------------------------- Inventory ------------------------------- */
     showInventory: boolean
@@ -117,6 +119,8 @@ class GameScene extends BaseScene {
         this.largeAmmoImage = new CustomImage("./images/largeammo.png")
         this.shellsAmmoImage = new CustomImage("./images/shellsammo.png")
         this.rangedEnemyImage = new CustomImage("./images/skins/rangedEnemy.png")
+        this.shopGuyImage = new CustomImage('./images/skins/shopGuy.png')
+        this.dummyImage = new CustomImage('./images/skins/dummy.png')
 
         this.showInventory = false
         this.showInventoryX = config.width - margin

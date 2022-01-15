@@ -45,6 +45,7 @@ class DungeonManager {
                     break
                 case "shop":
                     this.currentRoomObject.shopRoom.update()
+                    this.game.bullets.forEach(bullet => bullet.update(dt))
                     break
             }
         }

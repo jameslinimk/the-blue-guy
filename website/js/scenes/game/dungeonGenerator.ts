@@ -1,6 +1,7 @@
 import { Coordinates } from "../../angles"
 import { wait } from "../../game"
 import { GameScene, random } from "../game"
+import { pistol, the360 } from "./guns"
 import { ShopRoom } from "./rooms/shop"
 import { RoundManager } from "./roundManager"
 
@@ -268,7 +269,10 @@ function fullGenerate(game: GameScene, options: { layoutSize: number, rooms: num
                                 (<Room>layout[y][x]).dungeonRounds = new RoundManager(game)
                                 break
                             case "shop":
-                                (<Room>layout[y][x]).shopRoom = new ShopRoom()
+                                (<Room>layout[y][x]).shopRoom = new ShopRoom([
+                                    { item: { type: the360, amount: 1 }, cost: 5 },
+                                    { item: { type: pistol, amount: 1 }, cost: 5 }
+                                ], game)
                                 break
                         }
                     }
