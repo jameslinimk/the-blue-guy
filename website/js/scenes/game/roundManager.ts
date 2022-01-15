@@ -2,7 +2,7 @@ import { Coordinates } from "../../angles"
 import { config } from "../../config"
 import { clamp, GameScene, random } from "../game"
 import { Crate } from "./crate"
-import { fullGenerate, Layout } from "./dungeonGenerator"
+import { fullGenerate, Layout, Room } from "./dungeonGenerator"
 import { BallEnemy } from "./enemies/ballEnemy"
 import { EnemyType } from "./enemies/enemy"
 import { RangedEnemy } from "./enemies/rangedEnemy"
@@ -25,6 +25,15 @@ class DungeonManager {
         fullGenerate(game, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }, { type: "chest", count: 3 }]).then(layout => {
             this._layout = layout
             this.currentRoom = { x: (layout.length - 1) / 2, y: (layout.length - 1) / 2 }
+            // Start round 1 second after entering dungeon
+            game.systemMessages.push({
+                sentAt: performance.now(),
+                message: "Starting round in 1 second!"
+            })
+            console.log(this.layout[this.currentRoom.y][this.currentRoom.x])
+            setTimeout(() => {
+                (<Room>this.layout[this.currentRoom.y][this.currentRoom.x]).dungeonRounds.active = true
+            }, 1000)
         })
     }
 }
@@ -41,6 +50,7 @@ interface Round {
 
 class RoundManager {
     active: boolean
+    cleared: boolean
     rounds: Round[]
     round: number
     enemiesKilledThisRound: number
@@ -52,9 +62,10 @@ class RoundManager {
 
     constructor(game: GameScene) {
         this.active = false
+        this.cleared = false
 
         this.rounds = []
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 5; i++) {
             this.rounds[i] = {
                 enemies: 10,
                 enemySelection: ["ranged", "ball", "spiral"],
@@ -77,6 +88,7 @@ class RoundManager {
         if (!this.active) return
 
         if (this.enemiesKilledThisRound >= this.rounds[this.round].enemies) {
+            console.log("New round")
             this.round += 1
             this.enemiesKilledThisRound = 0
             this.game.enemies = []
@@ -84,7 +96,9 @@ class RoundManager {
         }
 
         if (this.round > this.rounds.length - 1) {
+            console.log("Finished!")
             this.active = false
+            this.cleared = true
             return
         }
 

@@ -13,7 +13,7 @@ import { Ray } from "./game/enemies/rangedEnemy"
 import { Map } from "./game/map"
 import { Player } from "./game/player"
 import { DungeonManager, RoundManager } from "./game/roundManager"
-import { drawHud, margin } from "./hud"
+import { drawHud, margin, SystemMessage } from "./hud"
 import { shooting } from "./shooting"
 
 function random(min: number, max: number) {
@@ -24,6 +24,7 @@ class GameScene extends BaseScene {
     /* ---------------------------------- Misc ---------------------------------- */
     player: Player
     mouse: Coordinates
+    systemMessages: SystemMessage[]
 
     /* --------------------------------- Bullets -------------------------------- */
     bullets: Bullet[]
@@ -85,6 +86,8 @@ class GameScene extends BaseScene {
         super()
 
         this.player = new Player(config.width / 2, config.height - 50, this)
+        this.mouse = { x: 0, y: 0 }
+        this.systemMessages = []
 
         this.bullets = []
         // this.bulletSound = new Sound("../../sounds/laserShoot.wav")
@@ -98,8 +101,6 @@ class GameScene extends BaseScene {
         this.rayId = 0
         this.balls = []
         this.ballId = 0
-
-        this.mouse = { x: 0, y: 0 }
 
         this.crates = []
         this.crateId = 0

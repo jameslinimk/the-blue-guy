@@ -97,7 +97,13 @@ class Map {
 
     processInput(events: Events) {
         if (this.game.dungeonManager.layout === null || this.game.dungeonManager.currentRoom === null) return
-        if (this.game.roundManager.active) return
+        if (this.game.roundManager.cleared) {
+            this.game.systemMessages.push({
+                sentAt: performance.now(),
+                message: "You cannot access the navigator during combat!"
+            })
+            return
+        }
         if (!this.mapNavigator) return
 
         let hspd = 0
@@ -128,8 +134,18 @@ class Map {
         if (this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y][this.game.dungeonManager.currentRoom.x + hspd] === spaceCharacter) hspd = 0
         if (hspd === 0 && vspd === 0) return
 
-        if ((<Room>this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd]?.[this.game.dungeonManager.currentRoom.x + hspd])?.discovered === false) {
-            (<Room>this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd][this.game.dungeonManager.currentRoom.x + hspd]).discovered = true
+        const room = (<Room>this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd]?.[this.game.dungeonManager.currentRoom.x + hspd])
+        if (room?.discovered === false) (<Room>this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd][this.game.dungeonManager.currentRoom.x + hspd]).discovered = true
+
+        if (room?.type === "dungeon" && room?.dungeonRounds?.cleared === false) {
+            // Start round 1 second after entering dungeon
+            this.game.systemMessages.push({
+                sentAt: performance.now(),
+                message: "Starting round in 1 second!"
+            })
+            setTimeout(() => {
+                (<Room>this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd][this.game.dungeonManager.currentRoom.x + hspd]).dungeonRounds.active = true
+            }, 1000)
         }
 
         this.game.dungeonManager.currentRoom.x += hspd

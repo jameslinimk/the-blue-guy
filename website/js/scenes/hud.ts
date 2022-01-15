@@ -45,6 +45,11 @@ function drawInventoryGunSlot(number: number, gun: Gun | null, ctx: CanvasRender
 //     }
 // }
 
+interface SystemMessage {
+    sentAt: number
+    message: string
+}
+
 function drawHud(ctx: CanvasRenderingContext2D, game: GameScene) {
     /* --------------------------------- Ammo ---------------------------------- */
     ctx.shadowBlur = 10
@@ -91,10 +96,19 @@ function drawHud(ctx: CanvasRenderingContext2D, game: GameScene) {
     ctx.fillStyle = "#FFFFFF"
     ctx.fillText(`Round: ${game.roundManager.round}`, config.width - ctx.measureText(`Round: ${game.roundManager.round}`).width - margin, margin + 16)
     ctx.shadowBlur = 0
+
+    /* ----------------------------- System messages ---------------------------- */
+    for (let i = 0; i < game.systemMessages.length; i++) {
+        const systemMessage = game.systemMessages[i]
+        ctx.font = "20px serif"
+        ctx.fillStyle = "#FF0000"
+        ctx.fillText(systemMessage.message, config.width / 2 - ctx.measureText(systemMessage.message).width / 2, margin + 20 * i)
+    }
 }
 
 export {
     drawHud,
-    margin
+    margin,
+    SystemMessage
 }
 

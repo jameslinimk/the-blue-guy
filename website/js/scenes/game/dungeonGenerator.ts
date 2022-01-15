@@ -34,6 +34,7 @@ function generateRoom(layout: Layout, lastRoom: Coordinates, game: GameScene) {
             y: lastRoom.y,
             direction: [Direction.up],
             type: "dungeon",
+            dungeonRounds: new RoundManager(game),
             discovered: false
         }
 

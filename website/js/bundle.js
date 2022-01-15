@@ -319,6 +319,7 @@ class GameScene extends game_1.BaseScene {
     /* ---------------------------------- Misc ---------------------------------- */
     player;
     mouse;
+    systemMessages;
     /* --------------------------------- Bullets -------------------------------- */
     bullets;
     noAmmoSound;
@@ -370,6 +371,8 @@ class GameScene extends game_1.BaseScene {
     constructor() {
         super();
         this.player = new player_1.Player(config_1.config.width / 2, config_1.config.height - 50, this);
+        this.mouse = { x: 0, y: 0 };
+        this.systemMessages = [];
         this.bullets = [];
         // this.bulletSound = new Sound("../../sounds/laserShoot.wav")
         this.noAmmoSound = new sound_1.Sound("./sounds/noammo.mp3");
@@ -381,7 +384,6 @@ class GameScene extends game_1.BaseScene {
         this.rayId = 0;
         this.balls = [];
         this.ballId = 0;
-        this.mouse = { x: 0, y: 0 };
         this.crates = [];
         this.crateId = 0;
         this.cratePickupSound = new sound_1.Sound("./sounds/pickupCoin.wav");
@@ -686,6 +688,7 @@ function generateRoom(layout, lastRoom, game) {
             y: lastRoom.y,
             direction: [Direction.up],
             type: "dungeon",
+            dungeonRounds: new roundManager_1.RoundManager(game),
             discovered: false
         };
         if (layout[returnRoom.y + 1]?.[returnRoom.x] !== spaceCharacter
@@ -1608,8 +1611,13 @@ class Map {
     processInput(events) {
         if (this.game.dungeonManager.layout === null || this.game.dungeonManager.currentRoom === null)
             return;
-        if (this.game.roundManager.active)
+        if (this.game.roundManager.cleared) {
+            this.game.systemMessages.push({
+                sentAt: performance.now(),
+                message: "You cannot access the navigator during combat!"
+            });
             return;
+        }
         if (!this.mapNavigator)
             return;
         let hspd = 0;
@@ -1646,8 +1654,18 @@ class Map {
             hspd = 0;
         if (hspd === 0 && vspd === 0)
             return;
-        if (this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd]?.[this.game.dungeonManager.currentRoom.x + hspd]?.discovered === false) {
+        const room = this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd]?.[this.game.dungeonManager.currentRoom.x + hspd];
+        if (room?.discovered === false)
             this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd][this.game.dungeonManager.currentRoom.x + hspd].discovered = true;
+        if (room?.type === "dungeon" && room?.dungeonRounds?.cleared === false) {
+            // Start round 1 second after entering dungeon
+            this.game.systemMessages.push({
+                sentAt: performance.now(),
+                message: "Starting round in 1 second!"
+            });
+            setTimeout(() => {
+                this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd][this.game.dungeonManager.currentRoom.x + hspd].dungeonRounds.active = true;
+            }, 1000);
         }
         this.game.dungeonManager.currentRoom.x += hspd;
         this.game.dungeonManager.currentRoom.y += vspd;
@@ -1954,12 +1972,22 @@ class DungeonManager {
         (0, dungeonGenerator_1.fullGenerate)(game, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }, { type: "chest", count: 3 }]).then(layout => {
             this._layout = layout;
             this.currentRoom = { x: (layout.length - 1) / 2, y: (layout.length - 1) / 2 };
+            // Start round 1 second after entering dungeon
+            game.systemMessages.push({
+                sentAt: performance.now(),
+                message: "Starting round in 1 second!"
+            });
+            console.log(this.layout[this.currentRoom.y][this.currentRoom.x]);
+            setTimeout(() => {
+                this.layout[this.currentRoom.y][this.currentRoom.x].dungeonRounds.active = true;
+            }, 1000);
         });
     }
 }
 exports.DungeonManager = DungeonManager;
 class RoundManager {
     active;
+    cleared;
     rounds;
     round;
     enemiesKilledThisRound;
@@ -1969,8 +1997,9 @@ class RoundManager {
     lastCrateSpawn;
     constructor(game) {
         this.active = false;
+        this.cleared = false;
         this.rounds = [];
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 5; i++) {
             this.rounds[i] = {
                 enemies: 10,
                 enemySelection: ["ranged", "ball", "spiral"],
@@ -1990,13 +2019,16 @@ class RoundManager {
         if (!this.active)
             return;
         if (this.enemiesKilledThisRound >= this.rounds[this.round].enemies) {
+            console.log("New round");
             this.round += 1;
             this.enemiesKilledThisRound = 0;
             this.game.enemies = [];
             this.game.crates = [];
         }
         if (this.round > this.rounds.length - 1) {
+            console.log("Finished!");
             this.active = false;
+            this.cleared = true;
             return;
         }
         const round = this.rounds[this.round];
@@ -2084,17 +2116,6 @@ function drawInventoryGunSlot(number, gun, ctx, margin, game) {
     ctx.fillStyle = "#FFFFFF";
     ctx.fillText((number + 1).toString(), x - ctx.measureText((number + 1).toString()).width + 64 - margin / 2, y + 22);
 }
-// function drawUpdate(dt: number, game: GameScene) {
-//     // TODO Finish this up check back in with player.ts because this aint working!
-//     const movePerFrame = ((game.showInventoryAnimationHideX - game.showInventoryAnimationShowX) / (game.showInventoryAnimationLength)) * dt
-//     game.showInventoryAnimationFrame += 1 * dt
-//     game.showInventoryAnimationX -= movePerFrame
-//     console.log("MovePerFrame: ", movePerFrame, "X: ", game.showInventoryAnimationX)
-//     if (game.showInventoryAnimationFrame >= game.showInventoryAnimationLength) {
-//         game.showInventoryAnimationX = game.showInventoryAnimationShowX
-//         game.showInventoryAnimation = false
-//     }
-// }
 function drawHud(ctx, game) {
     /* --------------------------------- Ammo ---------------------------------- */
     ctx.shadowBlur = 10;
@@ -2136,6 +2157,13 @@ function drawHud(ctx, game) {
     ctx.fillStyle = "#FFFFFF";
     ctx.fillText(`Round: ${game.roundManager.round}`, config_1.config.width - ctx.measureText(`Round: ${game.roundManager.round}`).width - margin, margin + 16);
     ctx.shadowBlur = 0;
+    /* ----------------------------- System messages ---------------------------- */
+    for (let i = 0; i < game.systemMessages.length; i++) {
+        const systemMessage = game.systemMessages[i];
+        ctx.font = "20px serif";
+        ctx.fillStyle = "#FF0000";
+        ctx.fillText(systemMessage.message, config_1.config.width / 2 - ctx.measureText(systemMessage.message).width / 2, margin + 20 * i);
+    }
 }
 exports.drawHud = drawHud;
 
