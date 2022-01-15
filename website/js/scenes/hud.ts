@@ -48,6 +48,7 @@ function drawInventoryGunSlot(number: number, gun: Gun | null, ctx: CanvasRender
 interface SystemMessage {
     sentAt: number
     message: string
+    id: number
 }
 
 function drawHud(ctx: CanvasRenderingContext2D, game: GameScene) {
@@ -91,19 +92,30 @@ function drawHud(ctx: CanvasRenderingContext2D, game: GameScene) {
     ctx.stroke()
 
     /* ------------------------------ Current round ----------------------------- */
-    ctx.shadowBlur = 10
-    ctx.font = "20px serif"
-    ctx.fillStyle = "#FFFFFF"
-    ctx.fillText(`Round: ${game.roundManager.round}`, config.width - ctx.measureText(`Round: ${game.roundManager.round}`).width - margin, margin + 16)
-    ctx.shadowBlur = 0
+    if (game.dungeonManager.currentRoomObject !== "0" && game.dungeonManager.currentRoomObject?.type === "dungeon" && game.dungeonManager.currentRoomObject.dungeonRounds.active) {
+        ctx.shadowBlur = 10
+        ctx.font = "20px serif"
+        ctx.fillStyle = "#FFFFFF"
+        ctx.fillText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`, config.width - ctx.measureText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`).width - margin, margin + 16)
+        ctx.shadowBlur = 0
+    }
 
     /* ----------------------------- System messages ---------------------------- */
+    ctx.font = "20px verdana"
+    ctx.fillStyle = "#FF0000"
+    ctx.shadowBlur = 10
+    ctx.shadowColor = "#000000"
+
+    const removedMessages = []
     for (let i = 0; i < game.systemMessages.length; i++) {
         const systemMessage = game.systemMessages[i]
-        ctx.font = "20px serif"
-        ctx.fillStyle = "#FF0000"
-        ctx.fillText(systemMessage.message, config.width / 2 - ctx.measureText(systemMessage.message).width / 2, margin + 20 * i)
+        if (game.getTicks() >= systemMessage.sentAt + 2000) {
+            removedMessages.push(systemMessage.id)
+            continue
+        }
+        ctx.fillText(systemMessage.message, config.width / 2 - ctx.measureText(systemMessage.message).width / 2, margin * 2 + 20 * i)
     }
+    if (removedMessages.length > 0) game.systemMessages = game.systemMessages.filter(msg => !removedMessages.includes(msg.id))
 }
 
 export {

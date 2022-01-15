@@ -17,7 +17,7 @@ class DungeonManager {
     }
     currentRoom?: Coordinates
     get currentRoomObject() {
-        if (this._layout === null || this.currentRoom === null) return null
+        if (this._layout === undefined || this.currentRoom === undefined) return null
         return this._layout[this.currentRoom.y][this.currentRoom.x]
     }
 
@@ -25,16 +25,16 @@ class DungeonManager {
         fullGenerate(game, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }, { type: "chest", count: 3 }]).then(layout => {
             this._layout = layout
             this.currentRoom = { x: (layout.length - 1) / 2, y: (layout.length - 1) / 2 }
-            // Start round 1 second after entering dungeon
-            game.systemMessages.push({
-                sentAt: performance.now(),
-                message: "Starting round in 1 second!"
-            })
-            console.log(this.layout[this.currentRoom.y][this.currentRoom.x])
             setTimeout(() => {
-                (<Room>this.layout[this.currentRoom.y][this.currentRoom.x]).dungeonRounds.active = true
+                (<Room>this._layout[this.currentRoom.y][this.currentRoom.x]).dungeonRounds.active = true
             }, 1000)
         })
+    }
+
+    update() {
+        if (this.currentRoomObject !== "0" && this.currentRoomObject !== null && this.currentRoomObject.type === "dungeon") {
+            this.currentRoomObject.dungeonRounds.update()
+        }
     }
 }
 
@@ -65,9 +65,9 @@ class RoundManager {
         this.cleared = false
 
         this.rounds = []
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 1; i++) {
             this.rounds[i] = {
-                enemies: 10,
+                enemies: 1,
                 enemySelection: ["ranged", "ball", "spiral"],
                 enemySpawnDelay: 500 + i * 100,
                 maxEnemies: 5 + i,
@@ -88,7 +88,6 @@ class RoundManager {
         if (!this.active) return
 
         if (this.enemiesKilledThisRound >= this.rounds[this.round].enemies) {
-            console.log("New round")
             this.round += 1
             this.enemiesKilledThisRound = 0
             this.game.enemies = []

@@ -320,6 +320,7 @@ class GameScene extends game_1.BaseScene {
     player;
     mouse;
     systemMessages;
+    systemMessagesId;
     /* --------------------------------- Bullets -------------------------------- */
     bullets;
     noAmmoSound;
@@ -337,7 +338,6 @@ class GameScene extends game_1.BaseScene {
     crateId;
     cratePickupSound;
     /* -------------------------------- Managers -------------------------------- */
-    roundManager;
     dungeonManager;
     map;
     /* --------------------------------- Images --------------------------------- */
@@ -373,6 +373,7 @@ class GameScene extends game_1.BaseScene {
         this.player = new player_1.Player(config_1.config.width / 2, config_1.config.height - 50, this);
         this.mouse = { x: 0, y: 0 };
         this.systemMessages = [];
+        this.systemMessagesId = 0;
         this.bullets = [];
         // this.bulletSound = new Sound("../../sounds/laserShoot.wav")
         this.noAmmoSound = new sound_1.Sound("./sounds/noammo.mp3");
@@ -387,7 +388,6 @@ class GameScene extends game_1.BaseScene {
         this.crates = [];
         this.crateId = 0;
         this.cratePickupSound = new sound_1.Sound("./sounds/pickupCoin.wav");
-        this.roundManager = new roundManager_1.RoundManager(this);
         this.dungeonManager = new roundManager_1.DungeonManager(this);
         this.map = new map_1.Map(this);
         this.healthImage = new image_1.CustomImage("./images/health.png");
@@ -459,8 +459,16 @@ class GameScene extends game_1.BaseScene {
                             }
                             break;
                         case "m":
+                            if (this.dungeonManager.currentRoomObject !== "0" && this.dungeonManager.currentRoomObject !== null && this.dungeonManager.currentRoomObject.type === "dungeon" && !this.dungeonManager.currentRoomObject.dungeonRounds?.cleared) {
+                                this.systemMessages.push({
+                                    sentAt: performance.now(),
+                                    message: "You cannot access the navigator during combat!",
+                                    id: this.systemMessagesId
+                                });
+                                this.systemMessagesId += 1;
+                                break;
+                            }
                             this.map.mapNavigator = !this.map.mapNavigator;
-                            console.log("📓 ~ file: game.ts ~ line 193 ~ this.map.mapNavigator", this.map.mapNavigator);
                             break;
                         case "g":
                             (0, dungeonGenerator_1.fullGenerate)(this, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }]).then(layout => {
@@ -483,7 +491,7 @@ class GameScene extends game_1.BaseScene {
         if (this.paused)
             return;
         // Round
-        this.roundManager.update();
+        this.dungeonManager.update();
         // Player
         this.player.update(dt);
         // Crates
@@ -676,9 +684,8 @@ function generateRoom(layout, lastRoom, game) {
     let returnRoom = {
         x: lastRoom.x,
         y: lastRoom.y,
-        direction: [Direction.up],
+        direction: [],
         type: "dungeon",
-        dungeonRounds: new roundManager_1.RoundManager(game),
         discovered: false
     };
     let found = false;
@@ -686,9 +693,8 @@ function generateRoom(layout, lastRoom, game) {
         returnRoom = {
             x: lastRoom.x,
             y: lastRoom.y,
-            direction: [Direction.up],
+            direction: [],
             type: "dungeon",
-            dungeonRounds: new roundManager_1.RoundManager(game),
             discovered: false
         };
         if (layout[returnRoom.y + 1]?.[returnRoom.x] !== spaceCharacter
@@ -910,6 +916,13 @@ function fullGenerate(game, options = { layoutSize: 7, rooms: 20 }, specialRooms
                     appendSpecial(layout, option.type);
                 }
             });
+            for (let y = 0; y < layout.length; y++) {
+                for (let x = 0; x < layout[y].length; x++) {
+                    const room = layout[y][x];
+                    if (room !== "0" && room.type === "dungeon")
+                        layout[y][x].dungeonRounds = new roundManager_1.RoundManager(game);
+                }
+            }
             resolve(layout);
         });
     });
@@ -1034,7 +1047,9 @@ class BallEnemy {
         this.health -= damage;
         if (this.health <= 0) {
             // this.game.balls = this.game.balls.filter(ball => !this.balls.includes(ball.id))
-            this.game.roundManager.enemiesKilledThisRound += 1;
+            if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject.type === "dungeon") {
+                this.game.dungeonManager.currentRoomObject.dungeonRounds.enemiesKilledThisRound += 1;
+            }
             return true;
         }
         return false;
@@ -1299,7 +1314,9 @@ class RangedEnemy {
         this.health -= damage;
         if (this.health <= 0) {
             // this.game.rays = this.game.rays.filter(ray => !this.rays.includes(ray.id))
-            this.game.roundManager.enemiesKilledThisRound += 1;
+            if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject.type === "dungeon") {
+                this.game.dungeonManager.currentRoomObject.dungeonRounds.enemiesKilledThisRound += 1;
+            }
             return true;
         }
         return false;
@@ -1396,7 +1413,9 @@ class SpiralEnemy {
         this.health -= damage;
         if (this.health <= 0) {
             // this.game.balls = this.game.balls.filter(ball => !this.balls.includes(ball.id))
-            this.game.roundManager.enemiesKilledThisRound += 1;
+            if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject.type === "dungeon") {
+                this.game.dungeonManager.currentRoomObject.dungeonRounds.enemiesKilledThisRound += 1;
+            }
             return true;
         }
         return false;
@@ -1611,13 +1630,8 @@ class Map {
     processInput(events) {
         if (this.game.dungeonManager.layout === null || this.game.dungeonManager.currentRoom === null)
             return;
-        if (this.game.roundManager.cleared) {
-            this.game.systemMessages.push({
-                sentAt: performance.now(),
-                message: "You cannot access the navigator during combat!"
-            });
+        if (this.game.dungeonManager.currentRoomObject?.type === "dungeon" && !this.game.dungeonManager.currentRoomObject?.dungeonRounds?.cleared)
             return;
-        }
         if (!this.mapNavigator)
             return;
         let hspd = 0;
@@ -1658,13 +1672,9 @@ class Map {
         if (room?.discovered === false)
             this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd][this.game.dungeonManager.currentRoom.x + hspd].discovered = true;
         if (room?.type === "dungeon" && room?.dungeonRounds?.cleared === false) {
-            // Start round 1 second after entering dungeon
-            this.game.systemMessages.push({
-                sentAt: performance.now(),
-                message: "Starting round in 1 second!"
-            });
             setTimeout(() => {
-                this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd][this.game.dungeonManager.currentRoom.x + hspd].dungeonRounds.active = true;
+                this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y][this.game.dungeonManager.currentRoom.x].dungeonRounds.active = true;
+                this.mapNavigator = false;
             }, 1000);
         }
         this.game.dungeonManager.currentRoom.x += hspd;
@@ -1964,7 +1974,7 @@ class DungeonManager {
     }
     currentRoom;
     get currentRoomObject() {
-        if (this._layout === null || this.currentRoom === null)
+        if (this._layout === undefined || this.currentRoom === undefined)
             return null;
         return this._layout[this.currentRoom.y][this.currentRoom.x];
     }
@@ -1972,16 +1982,15 @@ class DungeonManager {
         (0, dungeonGenerator_1.fullGenerate)(game, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }, { type: "chest", count: 3 }]).then(layout => {
             this._layout = layout;
             this.currentRoom = { x: (layout.length - 1) / 2, y: (layout.length - 1) / 2 };
-            // Start round 1 second after entering dungeon
-            game.systemMessages.push({
-                sentAt: performance.now(),
-                message: "Starting round in 1 second!"
-            });
-            console.log(this.layout[this.currentRoom.y][this.currentRoom.x]);
             setTimeout(() => {
-                this.layout[this.currentRoom.y][this.currentRoom.x].dungeonRounds.active = true;
+                this._layout[this.currentRoom.y][this.currentRoom.x].dungeonRounds.active = true;
             }, 1000);
         });
+    }
+    update() {
+        if (this.currentRoomObject !== "0" && this.currentRoomObject !== null && this.currentRoomObject.type === "dungeon") {
+            this.currentRoomObject.dungeonRounds.update();
+        }
     }
 }
 exports.DungeonManager = DungeonManager;
@@ -1999,9 +2008,9 @@ class RoundManager {
         this.active = false;
         this.cleared = false;
         this.rounds = [];
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 1; i++) {
             this.rounds[i] = {
-                enemies: 10,
+                enemies: 1,
                 enemySelection: ["ranged", "ball", "spiral"],
                 enemySpawnDelay: 500 + i * 100,
                 maxEnemies: 5 + i,
@@ -2019,7 +2028,6 @@ class RoundManager {
         if (!this.active)
             return;
         if (this.enemiesKilledThisRound >= this.rounds[this.round].enemies) {
-            console.log("New round");
             this.round += 1;
             this.enemiesKilledThisRound = 0;
             this.game.enemies = [];
@@ -2152,18 +2160,29 @@ function drawHud(ctx, game) {
     ctx.arc(game.mouse.x, game.mouse.y, 5, 0, 2 * Math.PI);
     ctx.stroke();
     /* ------------------------------ Current round ----------------------------- */
-    ctx.shadowBlur = 10;
-    ctx.font = "20px serif";
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(`Round: ${game.roundManager.round}`, config_1.config.width - ctx.measureText(`Round: ${game.roundManager.round}`).width - margin, margin + 16);
-    ctx.shadowBlur = 0;
+    if (game.dungeonManager.currentRoomObject !== "0" && game.dungeonManager.currentRoomObject?.type === "dungeon" && game.dungeonManager.currentRoomObject.dungeonRounds.active) {
+        ctx.shadowBlur = 10;
+        ctx.font = "20px serif";
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`, config_1.config.width - ctx.measureText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`).width - margin, margin + 16);
+        ctx.shadowBlur = 0;
+    }
     /* ----------------------------- System messages ---------------------------- */
+    ctx.font = "20px verdana";
+    ctx.fillStyle = "#FF0000";
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#000000";
+    const removedMessages = [];
     for (let i = 0; i < game.systemMessages.length; i++) {
         const systemMessage = game.systemMessages[i];
-        ctx.font = "20px serif";
-        ctx.fillStyle = "#FF0000";
-        ctx.fillText(systemMessage.message, config_1.config.width / 2 - ctx.measureText(systemMessage.message).width / 2, margin + 20 * i);
+        if (game.getTicks() >= systemMessage.sentAt + 2000) {
+            removedMessages.push(systemMessage.id);
+            continue;
+        }
+        ctx.fillText(systemMessage.message, config_1.config.width / 2 - ctx.measureText(systemMessage.message).width / 2, margin * 2 + 20 * i);
     }
+    if (removedMessages.length > 0)
+        game.systemMessages = game.systemMessages.filter(msg => !removedMessages.includes(msg.id));
 }
 exports.drawHud = drawHud;
 

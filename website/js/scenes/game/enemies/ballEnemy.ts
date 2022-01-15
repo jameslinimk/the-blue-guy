@@ -1,6 +1,7 @@
 import { Coordinates, distance, getAngle, project } from "../../../angles"
 import { config } from "../../../config"
 import { GameScene, random } from "../../game"
+import { Room } from "../dungeonGenerator"
 import { Enemy } from "./enemy"
 import { Ray } from "./rangedEnemy"
 
@@ -132,7 +133,9 @@ class BallEnemy implements Enemy {
         this.health -= damage
         if (this.health <= 0) {
             // this.game.balls = this.game.balls.filter(ball => !this.balls.includes(ball.id))
-            this.game.roundManager.enemiesKilledThisRound += 1
+            if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject.type === "dungeon") {
+                (<Room>this.game.dungeonManager.currentRoomObject).dungeonRounds.enemiesKilledThisRound += 1
+            }
             return true
         }
         return false

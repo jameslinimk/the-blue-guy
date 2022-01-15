@@ -12,7 +12,7 @@ import { Enemy } from "./game/enemies/enemy"
 import { Ray } from "./game/enemies/rangedEnemy"
 import { Map } from "./game/map"
 import { Player } from "./game/player"
-import { DungeonManager, RoundManager } from "./game/roundManager"
+import { DungeonManager } from "./game/roundManager"
 import { drawHud, margin, SystemMessage } from "./hud"
 import { shooting } from "./shooting"
 
@@ -25,6 +25,7 @@ class GameScene extends BaseScene {
     player: Player
     mouse: Coordinates
     systemMessages: SystemMessage[]
+    systemMessagesId: number
 
     /* --------------------------------- Bullets -------------------------------- */
     bullets: Bullet[]
@@ -46,7 +47,6 @@ class GameScene extends BaseScene {
     cratePickupSound: Sound
 
     /* -------------------------------- Managers -------------------------------- */
-    roundManager: RoundManager
     dungeonManager: DungeonManager
     map: Map
 
@@ -88,6 +88,7 @@ class GameScene extends BaseScene {
         this.player = new Player(config.width / 2, config.height - 50, this)
         this.mouse = { x: 0, y: 0 }
         this.systemMessages = []
+        this.systemMessagesId = 0
 
         this.bullets = []
         // this.bulletSound = new Sound("../../sounds/laserShoot.wav")
@@ -106,7 +107,6 @@ class GameScene extends BaseScene {
         this.crateId = 0
         this.cratePickupSound = new Sound("./sounds/pickupCoin.wav")
 
-        this.roundManager = new RoundManager(this)
         this.dungeonManager = new DungeonManager(this)
         this.map = new Map(this)
 
@@ -187,8 +187,16 @@ class GameScene extends BaseScene {
                             }
                             break
                         case "m":
+                            if (this.dungeonManager.currentRoomObject !== "0" && this.dungeonManager.currentRoomObject !== null && this.dungeonManager.currentRoomObject.type === "dungeon" && !this.dungeonManager.currentRoomObject.dungeonRounds?.cleared) {
+                                this.systemMessages.push({
+                                    sentAt: performance.now(),
+                                    message: "You cannot access the navigator during combat!",
+                                    id: this.systemMessagesId
+                                })
+                                this.systemMessagesId += 1
+                                break
+                            }
                             this.map.mapNavigator = !this.map.mapNavigator
-                            console.log("📓 ~ file: game.ts ~ line 193 ~ this.map.mapNavigator", this.map.mapNavigator)
                             break
                         case "g":
                             fullGenerate(this, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }]).then(layout => {
@@ -212,7 +220,7 @@ class GameScene extends BaseScene {
         if (this.paused) return
 
         // Round
-        this.roundManager.update()
+        this.dungeonManager.update()
 
         // Player
         this.player.update(dt)

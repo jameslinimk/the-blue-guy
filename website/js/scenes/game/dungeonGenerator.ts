@@ -22,9 +22,8 @@ function generateRoom(layout: Layout, lastRoom: Coordinates, game: GameScene) {
     let returnRoom: Room = {
         x: lastRoom.x,
         y: lastRoom.y,
-        direction: [Direction.up],
+        direction: [],
         type: "dungeon",
-        dungeonRounds: new RoundManager(game),
         discovered: false
     }
     let found = false
@@ -32,9 +31,8 @@ function generateRoom(layout: Layout, lastRoom: Coordinates, game: GameScene) {
         returnRoom = {
             x: lastRoom.x,
             y: lastRoom.y,
-            direction: [Direction.up],
+            direction: [],
             type: "dungeon",
-            dungeonRounds: new RoundManager(game),
             discovered: false
         }
 
@@ -259,6 +257,12 @@ function fullGenerate(game: GameScene, options: { layoutSize: number, rooms: num
                     appendSpecial(layout, option.type)
                 }
             })
+            for (let y = 0; y < layout.length; y++) {
+                for (let x = 0; x < layout[y].length; x++) {
+                    const room = layout[y][x]
+                    if (room !== "0" && room.type === "dungeon") (<Room>layout[y][x]).dungeonRounds = new RoundManager(game)
+                }
+            }
             resolve(layout)
         })
     })
