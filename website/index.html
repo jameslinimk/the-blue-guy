@@ -33,8 +33,9 @@
 
         .volumeSlider {
             position: absolute;
-            width: 100px;
-            height: 300px;
+            width: 200px;
+            left: 180px;
+            top: 190px;
         }
     </style>
 </head>
@@ -42,8 +43,9 @@
 <body style="overflow: hidden">
     <div class="centerChildren">
         <canvas id="game" class="game"></canvas>
-        <input id="volumeControl" type="range" min="0" max="100" step="1" value="100" class="volumeSlider">
+        <input id="volumeControl" type="hidden" min="0" max="100" step="1" value="100" class="volumeSlider">
     </div>
+    <!-- Below are sprites and sounds -->
 </body>
 
 </html>

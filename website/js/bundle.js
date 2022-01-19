@@ -353,6 +353,16 @@ if (config_1.config.fullscreen) {
     const resizeWindow = () => {
         canvas.style.width = `${Math.min(window.innerWidth, window.innerHeight) - 20}px`;
         canvas.style.height = `${Math.min(window.innerWidth, window.innerHeight) - 20}px`;
+        const volumeSlider = document.getElementById("volumeControl");
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = rect.width / canvas.width;
+        const scaleY = rect.height / canvas.height;
+        const style = window.getComputedStyle(volumeSlider);
+        volumeSlider.style.transform = `scale(${scaleX}, ${scaleY})`;
+        volumeSlider.style.left = `${parseInt(style.getPropertyValue("left").split("px")[0]) * scaleX}`;
+        volumeSlider.style.top = `${parseInt(style.getPropertyValue("top").split("px")[0]) * scaleY}`;
+        console.log(scaleX, scaleY);
+        // TODO If this doesn't work just make a custom slider in the drawPauseMenu function
     };
     resizeWindow();
     window.onresize = resizeWindow;
@@ -532,7 +542,7 @@ class GameScene extends game_1.BaseScene {
                             this.map.mapNavigator = !this.map.mapNavigator;
                             break;
                         case "p":
-                            console.log("Pause");
+                            ((!this.paused) ? hud_1.pauseMenuOn : hud_1.pauseMenuOff)();
                             this.paused = !this.paused;
                             break;
                     }
@@ -560,8 +570,10 @@ class GameScene extends game_1.BaseScene {
         this.dungeonManager.draw();
         /* -------------------------------- Universal ------------------------------- */
         this.player.draw();
-        (0, hud_1.drawHud)(this.ctx, this);
+        (0, hud_1.drawHud)(this);
         this.map.draw();
+        if (this.paused)
+            (0, hud_1.drawPauseMenu)(this.ctx);
     }
     getTicks() {
         return performance.now();
@@ -2245,7 +2257,7 @@ exports.RoundManager = RoundManager;
 },{"../../config":4,"../game":8,"./crate":10,"./dungeonGenerator":11,"./enemies/ballEnemy":12,"./enemies/rangedEnemy":13,"./enemies/spiralEnemy":14}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.margin = exports.drawHud = void 0;
+exports.margin = exports.pauseMenuOff = exports.pauseMenuOn = exports.drawPauseMenu = exports.drawHud = void 0;
 const config_1 = require("../config");
 const game_1 = require("./game");
 const guns_1 = require("./game/guns");
@@ -2273,60 +2285,60 @@ function drawInventoryGunSlot(number, gun, ctx, margin, game) {
     ctx.fillStyle = "#FFFFFF";
     ctx.fillText((number + 1).toString(), x - ctx.measureText((number + 1).toString()).width + 64 - margin / 2, y + 22);
 }
-function drawHud(ctx, game) {
+function drawHud(game) {
     /* --------------------------------- Ammo ---------------------------------- */
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = "#000000";
-    drawAmmoCounter(1, guns_1.Ammo.small, game.smallAmmoImage, ctx, game);
-    drawAmmoCounter(2, guns_1.Ammo.medium, game.mediumAmmoImage, ctx, game);
-    drawAmmoCounter(3, guns_1.Ammo.large, game.largeAmmoImage, ctx, game);
-    drawAmmoCounter(4, guns_1.Ammo.shell, game.shellsAmmoImage, ctx, game);
+    game.ctx.shadowBlur = 10;
+    game.ctx.shadowColor = "#000000";
+    drawAmmoCounter(1, guns_1.Ammo.small, game.smallAmmoImage, game.ctx, game);
+    drawAmmoCounter(2, guns_1.Ammo.medium, game.mediumAmmoImage, game.ctx, game);
+    drawAmmoCounter(3, guns_1.Ammo.large, game.largeAmmoImage, game.ctx, game);
+    drawAmmoCounter(4, guns_1.Ammo.shell, game.shellsAmmoImage, game.ctx, game);
     /* ---------------------------------- Lives --------------------------------- */
-    ctx.shadowColor = "#FD0100";
-    ctx.drawImage(game.healthImage.image, margin, margin);
-    ctx.font = "20px serif";
-    ctx.fillStyle = "#FFFFFF";
-    ctx.shadowColor = "#000000";
-    ctx.fillText(game.player.lives.toString(), margin * 2 + 32, margin + 16);
+    game.ctx.shadowColor = "#FD0100";
+    game.ctx.drawImage(game.healthImage.image, margin, margin);
+    game.ctx.font = "20px serif";
+    game.ctx.fillStyle = "#FFFFFF";
+    game.ctx.shadowColor = "#000000";
+    game.ctx.fillText(game.player.lives.toString(), margin * 2 + 32, margin + 16);
     /* ---------------------------------- Coins --------------------------------- */
-    ctx.shadowColor = "#FFDF00";
-    ctx.drawImage(game.coinsImage.image, margin, margin * 2 + 32);
-    ctx.font = "20px serif";
-    ctx.fillStyle = "#FFFFFF";
-    ctx.shadowColor = "#000000";
-    ctx.fillText(game.player.coins.toString(), margin * 2 + 32, margin * 2 + 32 + 16);
+    game.ctx.shadowColor = "#FFDF00";
+    game.ctx.drawImage(game.coinsImage.image, margin, margin * 2 + 32);
+    game.ctx.font = "20px serif";
+    game.ctx.fillStyle = "#FFFFFF";
+    game.ctx.shadowColor = "#000000";
+    game.ctx.fillText(game.player.coins.toString(), margin * 2 + 32, margin * 2 + 32 + 16);
     /* ------------------------------ Gun selector ------------------------------ */
-    ctx.shadowBlur = 2;
-    ctx.drawImage(game.frameImage.image, margin, config_1.config.height - (32 * 4 + margin));
-    ctx.drawImage(game.player.gun.image.image, margin, config_1.config.height - (32 * 4 + margin));
+    game.ctx.shadowBlur = 2;
+    game.ctx.drawImage(game.frameImage.image, margin, config_1.config.height - (32 * 4 + margin));
+    game.ctx.drawImage(game.player.gun.image.image, margin, config_1.config.height - (32 * 4 + margin));
     for (let i = 0; i < 9; i++) {
         const gun = game.player.gunInventory[i + 1];
-        drawInventoryGunSlot(i, gun, ctx, margin, game);
+        drawInventoryGunSlot(i, gun, game.ctx, margin, game);
     }
     /* ------------------------------ Custom cursor ----------------------------- */
-    ctx.shadowBlur = 4;
-    ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(game.mouse.x, game.mouse.y, 5, 0, 2 * Math.PI);
-    ctx.stroke();
-    ctx.strokeStyle = "#FFFFFF";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(game.mouse.x, game.mouse.y, 5, 0, 2 * Math.PI);
-    ctx.stroke();
+    game.ctx.shadowBlur = 4;
+    game.ctx.strokeStyle = "#000000";
+    game.ctx.lineWidth = 3;
+    game.ctx.beginPath();
+    game.ctx.arc(game.mouse.x, game.mouse.y, 5, 0, 2 * Math.PI);
+    game.ctx.stroke();
+    game.ctx.strokeStyle = "#FFFFFF";
+    game.ctx.lineWidth = 2;
+    game.ctx.beginPath();
+    game.ctx.arc(game.mouse.x, game.mouse.y, 5, 0, 2 * Math.PI);
+    game.ctx.stroke();
     /* ------------------------------ Current round ----------------------------- */
     if (game.dungeonManager.currentRoomObject !== "0" && game.dungeonManager.currentRoomObject?.type === "dungeon" && game.dungeonManager.currentRoomObject.dungeonRounds.active) {
-        ctx.shadowBlur = 10;
-        ctx.font = "20px serif";
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`, config_1.config.width - ctx.measureText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`).width - margin, margin + 16);
+        game.ctx.shadowBlur = 10;
+        game.ctx.font = "20px serif";
+        game.ctx.fillStyle = "#FFFFFF";
+        game.ctx.fillText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`, config_1.config.width - game.ctx.measureText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`).width - margin, margin + 16);
     }
     /* ----------------------------- System messages ---------------------------- */
-    ctx.font = "20px verdana";
-    ctx.fillStyle = "#FF0000";
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = "#000000";
+    game.ctx.font = "20px verdana";
+    game.ctx.fillStyle = "#FF0000";
+    game.ctx.shadowBlur = 10;
+    game.ctx.shadowColor = "#000000";
     const removedMessages = [];
     for (let i = 0; i < game.systemMessages.length; i++) {
         const systemMessage = game.systemMessages[i];
@@ -2334,13 +2346,36 @@ function drawHud(ctx, game) {
             removedMessages.push(systemMessage.id);
             continue;
         }
-        ctx.fillText(systemMessage.message, config_1.config.width / 2 - ctx.measureText(systemMessage.message).width / 2, margin * 2 + 20 * i);
+        game.ctx.fillText(systemMessage.message, config_1.config.width / 2 - game.ctx.measureText(systemMessage.message).width / 2, margin * 2 + 20 * i);
     }
     if (removedMessages.length > 0)
         game.systemMessages = game.systemMessages.filter(msg => !removedMessages.includes(msg.id));
-    ctx.shadowBlur = 0;
+    game.ctx.shadowBlur = 0;
 }
 exports.drawHud = drawHud;
+function pauseMenuOn() {
+    // Enable volume slider
+    const volumeSlider = document.getElementById("volumeControl");
+    if (volumeSlider) {
+        volumeSlider.type = "range";
+    }
+}
+exports.pauseMenuOn = pauseMenuOn;
+function pauseMenuOff() {
+    // Disable volume slider
+    const volumeSlider = document.getElementById("volumeControl");
+    if (volumeSlider) {
+        volumeSlider.type = "hidden";
+    }
+}
+exports.pauseMenuOff = pauseMenuOff;
+function drawPauseMenu(ctx) {
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(config_1.config.width / 2 - 500 / 2, config_1.config.height / 2 - 500 / 2, 500, 500);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText("Pause menu", config_1.config.width / 2 - ctx.measureText("Pause menu").width / 2, config_1.config.height / 2 - 500 / 2 + 30);
+}
+exports.drawPauseMenu = drawPauseMenu;
 
 },{"../config":4,"./game":8,"./game/guns":15}],21:[function(require,module,exports){
 "use strict";
@@ -2384,12 +2419,10 @@ class SoundVolume {
 }
 const volume = new SoundVolume();
 exports.volume = volume;
-const button = document.getElementById("volumeControl");
-if (button) {
-    const changeVolume = () => volume.volume = parseInt(button.value) / 100;
-    button.oninput = changeVolume;
-    button.onchange = changeVolume;
-}
+const volumeSlider = document.getElementById("volumeControl");
+const changeVolume = () => volume.volume = parseInt(volumeSlider.value) / 100;
+volumeSlider.oninput = changeVolume;
+volumeSlider.onchange = changeVolume;
 class Sound {
     sound;
     constructor(source) {

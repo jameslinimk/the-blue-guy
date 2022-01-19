@@ -30,88 +30,73 @@ function drawInventoryGunSlot(number: number, gun: Gun | null, ctx: CanvasRender
     ctx.fillText((number + 1).toString(), x - ctx.measureText((number + 1).toString()).width + 64 - margin / 2, y + 22)
 }
 
-// function drawUpdate(dt: number, game: GameScene) {
-//     // TODO Finish this up check back in with player.ts because this aint working!
-//     const movePerFrame = ((game.showInventoryAnimationHideX - game.showInventoryAnimationShowX) / (game.showInventoryAnimationLength)) * dt
-//     game.showInventoryAnimationFrame += 1 * dt
-
-//     game.showInventoryAnimationX -= movePerFrame
-
-//     console.log("MovePerFrame: ", movePerFrame, "X: ", game.showInventoryAnimationX)
-
-//     if (game.showInventoryAnimationFrame >= game.showInventoryAnimationLength) {
-//         game.showInventoryAnimationX = game.showInventoryAnimationShowX
-//         game.showInventoryAnimation = false
-//     }
-// }
-
 interface SystemMessage {
     sentAt: number
     message: string
     id: number
 }
 
-function drawHud(ctx: CanvasRenderingContext2D, game: GameScene) {
+function drawHud(game: GameScene) {
     /* --------------------------------- Ammo ---------------------------------- */
-    ctx.shadowBlur = 10
-    ctx.shadowColor = "#000000"
-    drawAmmoCounter(1, Ammo.small, game.smallAmmoImage, ctx, game)
-    drawAmmoCounter(2, Ammo.medium, game.mediumAmmoImage, ctx, game)
-    drawAmmoCounter(3, Ammo.large, game.largeAmmoImage, ctx, game)
-    drawAmmoCounter(4, Ammo.shell, game.shellsAmmoImage, ctx, game)
+    game.ctx.shadowBlur = 10
+    game.ctx.shadowColor = "#000000"
+    drawAmmoCounter(1, Ammo.small, game.smallAmmoImage, game.ctx, game)
+    drawAmmoCounter(2, Ammo.medium, game.mediumAmmoImage, game.ctx, game)
+    drawAmmoCounter(3, Ammo.large, game.largeAmmoImage, game.ctx, game)
+    drawAmmoCounter(4, Ammo.shell, game.shellsAmmoImage, game.ctx, game)
 
     /* ---------------------------------- Lives --------------------------------- */
-    ctx.shadowColor = "#FD0100"
-    ctx.drawImage(game.healthImage.image, margin, margin)
-    ctx.font = "20px serif"
-    ctx.fillStyle = "#FFFFFF"
-    ctx.shadowColor = "#000000"
-    ctx.fillText(game.player.lives.toString(), margin * 2 + 32, margin + 16)
+    game.ctx.shadowColor = "#FD0100"
+    game.ctx.drawImage(game.healthImage.image, margin, margin)
+    game.ctx.font = "20px serif"
+    game.ctx.fillStyle = "#FFFFFF"
+    game.ctx.shadowColor = "#000000"
+    game.ctx.fillText(game.player.lives.toString(), margin * 2 + 32, margin + 16)
 
     /* ---------------------------------- Coins --------------------------------- */
-    ctx.shadowColor = "#FFDF00"
-    ctx.drawImage(game.coinsImage.image, margin, margin * 2 + 32)
-    ctx.font = "20px serif"
-    ctx.fillStyle = "#FFFFFF"
-    ctx.shadowColor = "#000000"
-    ctx.fillText(game.player.coins.toString(), margin * 2 + 32, margin * 2 + 32 + 16)
+    game.ctx.shadowColor = "#FFDF00"
+    game.ctx.drawImage(game.coinsImage.image, margin, margin * 2 + 32)
+    game.ctx.font = "20px serif"
+    game.ctx.fillStyle = "#FFFFFF"
+    game.ctx.shadowColor = "#000000"
+    game.ctx.fillText(game.player.coins.toString(), margin * 2 + 32, margin * 2 + 32 + 16)
 
     /* ------------------------------ Gun selector ------------------------------ */
-    ctx.shadowBlur = 2
-    ctx.drawImage(game.frameImage.image, margin, config.height - (32 * 4 + margin))
-    ctx.drawImage(game.player.gun.image.image, margin, config.height - (32 * 4 + margin))
+    game.ctx.shadowBlur = 2
+    game.ctx.drawImage(game.frameImage.image, margin, config.height - (32 * 4 + margin))
+    game.ctx.drawImage(game.player.gun.image.image, margin, config.height - (32 * 4 + margin))
     for (let i = 0; i < 9; i++) {
         const gun: Gun | null = game.player.gunInventory[i + 1]
-        drawInventoryGunSlot(i, gun, ctx, margin, game)
+        drawInventoryGunSlot(i, gun, game.ctx, margin, game)
     }
 
     /* ------------------------------ Custom cursor ----------------------------- */
-    ctx.shadowBlur = 4
-    ctx.strokeStyle = "#000000"
-    ctx.lineWidth = 3
-    ctx.beginPath()
-    ctx.arc(game.mouse.x, game.mouse.y, 5, 0, 2 * Math.PI)
-    ctx.stroke()
+    game.ctx.shadowBlur = 4
+    game.ctx.strokeStyle = "#000000"
+    game.ctx.lineWidth = 3
+    game.ctx.beginPath()
+    game.ctx.arc(game.mouse.x, game.mouse.y, 5, 0, 2 * Math.PI)
+    game.ctx.stroke()
 
-    ctx.strokeStyle = "#FFFFFF"
-    ctx.lineWidth = 2
-    ctx.beginPath()
-    ctx.arc(game.mouse.x, game.mouse.y, 5, 0, 2 * Math.PI)
-    ctx.stroke()
+    game.ctx.strokeStyle = "#FFFFFF"
+    game.ctx.lineWidth = 2
+    game.ctx.beginPath()
+    game.ctx.arc(game.mouse.x, game.mouse.y, 5, 0, 2 * Math.PI)
+    game.ctx.stroke()
 
     /* ------------------------------ Current round ----------------------------- */
     if (game.dungeonManager.currentRoomObject !== "0" && game.dungeonManager.currentRoomObject?.type === "dungeon" && game.dungeonManager.currentRoomObject.dungeonRounds.active) {
-        ctx.shadowBlur = 10
-        ctx.font = "20px serif"
-        ctx.fillStyle = "#FFFFFF"
-        ctx.fillText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`, config.width - ctx.measureText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`).width - margin, margin + 16)
+        game.ctx.shadowBlur = 10
+        game.ctx.font = "20px serif"
+        game.ctx.fillStyle = "#FFFFFF"
+        game.ctx.fillText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`, config.width - game.ctx.measureText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`).width - margin, margin + 16)
     }
 
     /* ----------------------------- System messages ---------------------------- */
-    ctx.font = "20px verdana"
-    ctx.fillStyle = "#FF0000"
-    ctx.shadowBlur = 10
-    ctx.shadowColor = "#000000"
+    game.ctx.font = "20px verdana"
+    game.ctx.fillStyle = "#FF0000"
+    game.ctx.shadowBlur = 10
+    game.ctx.shadowColor = "#000000"
 
     const removedMessages = []
     for (let i = 0; i < game.systemMessages.length; i++) {
@@ -120,14 +105,40 @@ function drawHud(ctx: CanvasRenderingContext2D, game: GameScene) {
             removedMessages.push(systemMessage.id)
             continue
         }
-        ctx.fillText(systemMessage.message, config.width / 2 - ctx.measureText(systemMessage.message).width / 2, margin * 2 + 20 * i)
+        game.ctx.fillText(systemMessage.message, config.width / 2 - game.ctx.measureText(systemMessage.message).width / 2, margin * 2 + 20 * i)
     }
     if (removedMessages.length > 0) game.systemMessages = game.systemMessages.filter(msg => !removedMessages.includes(msg.id))
-    ctx.shadowBlur = 0
+    game.ctx.shadowBlur = 0
+}
+
+function pauseMenuOn() {
+    // Enable volume slider
+    const volumeSlider = <HTMLInputElement>document.getElementById("volumeControl")
+    if (volumeSlider) {
+        volumeSlider.type = "range"
+    }
+}
+
+function pauseMenuOff() {
+    // Disable volume slider
+    const volumeSlider = <HTMLInputElement>document.getElementById("volumeControl")
+    if (volumeSlider) {
+        volumeSlider.type = "hidden"
+    }
+}
+
+function drawPauseMenu(ctx: CanvasRenderingContext2D) {
+    ctx.fillStyle = "#000000"
+    ctx.fillRect(config.width / 2 - 500 / 2, config.height / 2 - 500 / 2, 500, 500)
+    ctx.fillStyle = "#FFFFFF"
+    ctx.fillText("Pause menu", config.width / 2 - ctx.measureText("Pause menu").width / 2, config.height / 2 - 500 / 2 + 30)
 }
 
 export {
     drawHud,
+    drawPauseMenu,
+    pauseMenuOn,
+    pauseMenuOff,
     margin,
     SystemMessage
 }

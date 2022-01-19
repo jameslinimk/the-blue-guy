@@ -10,7 +10,7 @@ import { Ray } from "./game/enemies/rangedEnemy"
 import { Map } from "./game/map"
 import { Player } from "./game/player"
 import { DungeonManager } from "./game/roundManager"
-import { drawHud, margin, SystemMessage } from "./hud"
+import { drawHud, drawPauseMenu, margin, pauseMenuOff, pauseMenuOn, SystemMessage } from "./hud"
 import { shooting } from "./shooting"
 
 function random(min: number, max: number) {
@@ -190,7 +190,7 @@ class GameScene extends BaseScene {
                             this.map.mapNavigator = !this.map.mapNavigator
                             break
                         case "p":
-                            console.log("Pause")
+                            ((!this.paused) ? pauseMenuOn : pauseMenuOff)()
                             this.paused = !this.paused
                             break
                     }
@@ -222,8 +222,9 @@ class GameScene extends BaseScene {
 
         /* -------------------------------- Universal ------------------------------- */
         this.player.draw()
-        drawHud(this.ctx, this)
+        drawHud(this)
         this.map.draw()
+        if (this.paused) drawPauseMenu(this.ctx)
     }
 
     getTicks() {
