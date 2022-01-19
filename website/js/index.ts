@@ -8,19 +8,13 @@ canvas.width = config.width
 canvas.height = config.height
 if (config.fullscreen) {
     const resizeWindow = () => {
-        if (window.innerWidth === window.innerHeight) {
-            canvas.style.width = "100%"
-            canvas.style.height = "100%"
-        } else {
-            canvas.style.width = `${Math.min(window.innerWidth, window.innerHeight)}`
-            canvas.style.height = `${Math.min(window.innerWidth, window.innerHeight)}`
-            console.log("📓 ~ file: index.ts ~ line 17 ~ canvas.style.height", Math.min(window.innerWidth, window.innerHeight))
-        }
+        canvas.style.width = `${Math.min(window.innerWidth, window.innerHeight) - 20}px`
+        canvas.style.height = `${Math.min(window.innerWidth, window.innerHeight) - 20}px`
     }
 
     resizeWindow()
     window.onresize = resizeWindow
 }
-// if (detectMobile()) alert("A mobile device has been detected. This game requires a keyboard to move. Touch to shoot is available, but not recommended.")
+// if (detectMobile()) alert("A mobile device has been (possibly) detected. This game requires a keyboard to move. Touch to shoot is available, but not recommended.")
 
 play(new GameScene(), config.fps, canvas)

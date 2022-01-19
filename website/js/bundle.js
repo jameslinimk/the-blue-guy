@@ -328,20 +328,13 @@ canvas.width = config_1.config.width;
 canvas.height = config_1.config.height;
 if (config_1.config.fullscreen) {
     const resizeWindow = () => {
-        if (window.innerWidth === window.innerHeight) {
-            canvas.style.width = "100%";
-            canvas.style.height = "100%";
-        }
-        else {
-            canvas.style.width = `${Math.min(window.innerWidth, window.innerHeight)}`;
-            canvas.style.height = `${Math.min(window.innerWidth, window.innerHeight)}`;
-            console.log("📓 ~ file: index.ts ~ line 17 ~ canvas.style.height", Math.min(window.innerWidth, window.innerHeight));
-        }
+        canvas.style.width = `${Math.min(window.innerWidth, window.innerHeight) - 20}px`;
+        canvas.style.height = `${Math.min(window.innerWidth, window.innerHeight) - 20}px`;
     };
     resizeWindow();
     window.onresize = resizeWindow;
 }
-// if (detectMobile()) alert("A mobile device has been detected. This game requires a keyboard to move. Touch to shoot is available, but not recommended.")
+// if (detectMobile()) alert("A mobile device has been (possibly) detected. This game requires a keyboard to move. Touch to shoot is available, but not recommended.")
 (0, game_1.play)(new game_2.GameScene(), config_1.config.fps, canvas);
 
 },{"./config":4,"./game":5,"./scenes/game":8}],8:[function(require,module,exports){
