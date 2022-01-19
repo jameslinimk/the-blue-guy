@@ -81,13 +81,13 @@ class Map {
         }
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
+    draw() {
         if (this.game.dungeonManager.layout === null) return
 
         if (this.mapNavigator) {
-            ctx.fillStyle = "#000000"
-            ctx.fillRect(0, 0, config.width, config.height)
-            this.drawMap(ctx)
+            this.game.ctx.fillStyle = "#000000"
+            this.game.ctx.fillRect(0, 0, config.width, config.height)
+            this.drawMap(this.game.ctx)
         }
     }
 

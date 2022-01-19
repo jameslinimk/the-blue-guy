@@ -157,9 +157,13 @@ class GameScene extends BaseScene {
                 case "MouseMove":
                     event = <MouseMoveEvent>event
 
-                    // Set relative to canvas window
-                    const rect = this.canvas?.getBoundingClientRect()
-                    this.mouse = { x: event.raw.clientX - rect.left, y: event.raw.clientY - rect.top }
+                    // Get mouse relative to canvas element
+                    if (!this.ctx.canvas) break
+                    const rect = this.ctx.canvas.getBoundingClientRect()
+                    const scaleX = this.ctx.canvas.width / rect.width
+                    const scaleY = this.ctx.canvas.height / rect.height
+
+                    this.mouse = { x: (event.raw.clientX - rect.left) * scaleX, y: (event.raw.clientY - rect.top) * scaleY }
                     break
 
                 case "MouseDown":
@@ -175,7 +179,7 @@ class GameScene extends BaseScene {
                     event = <KeyDownEvent>event
                     switch (event.key.toLowerCase()) {
                         case "f":
-                            this.canvas.requestFullscreen()
+                            this.ctx.canvas.requestFullscreen()
                             break
                         case "i":
                             if (this.paused) break
@@ -223,18 +227,18 @@ class GameScene extends BaseScene {
         this.hideInventoryAnimation.update(dt)
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
+    draw() {
         // Background
-        ctx.fillStyle = "#5a6988"
-        ctx.fillRect(0, 0, config.width, config.height)
+        this.ctx.fillStyle = "#5a6988"
+        this.ctx.fillRect(0, 0, config.width, config.height)
 
         /* --------------------------------- Dungeon -------------------------------- */
-        this.dungeonManager.draw(ctx)
+        this.dungeonManager.draw()
 
         /* -------------------------------- Universal ------------------------------- */
-        this.player.draw(ctx)
-        drawHud(ctx, this)
-        this.map.draw(ctx)
+        this.player.draw()
+        drawHud(this.ctx, this)
+        this.map.draw()
     }
 
     getTicks() {

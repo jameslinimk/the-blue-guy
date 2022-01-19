@@ -13,9 +13,4 @@
 | `1-9`              | Changed equipped gun                                |
 | `I`                | Open inventory                                      |
 | `P`                | Pause                                               |
-| `F`                | Fullscreen (mouse desync issue)                     |
-
-### Todo:
- - Make all guns expect for pistol locked, earning more as you go
- - Change round details of rounds in the layout and make them harder as you go
- - Shop, chest, and end rooms
+| `F`                | Fullscreen                                          |

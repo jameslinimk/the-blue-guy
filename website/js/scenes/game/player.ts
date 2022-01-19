@@ -170,22 +170,22 @@ class Player {
         }
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
+    draw() {
         if (this.dashing) {
-            ctx.beginPath()
-            ctx.moveTo(Math.round(this.location.x), Math.round(this.location.y))
-            ctx.strokeStyle = "#0000FF"
-            ctx.lineWidth = 10
-            ctx.shadowColor = "#0000FF"
-            ctx.shadowBlur = 2
-            ctx.lineTo(Math.round(this.dashOrigin.x), Math.round(this.dashOrigin.y))
-            ctx.stroke()
+            this.game.ctx.beginPath()
+            this.game.ctx.moveTo(Math.round(this.location.x), Math.round(this.location.y))
+            this.game.ctx.strokeStyle = "#0000FF"
+            this.game.ctx.lineWidth = 10
+            this.game.ctx.shadowColor = "#0000FF"
+            this.game.ctx.shadowBlur = 2
+            this.game.ctx.lineTo(Math.round(this.dashOrigin.x), Math.round(this.dashOrigin.y))
+            this.game.ctx.stroke()
         }
 
-        ctx.shadowColor = "#000000"
-        ctx.shadowBlur = 5
-        ctx.drawImage((!this.dashing) ? this.image.image : this.dashingImage.image, Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2))
-        ctx.shadowBlur = 0
+        this.game.ctx.shadowColor = "#000000"
+        this.game.ctx.shadowBlur = 5
+        this.game.ctx.drawImage((!this.dashing) ? this.image.image : this.dashingImage.image, Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2))
+        this.game.ctx.shadowBlur = 0
     }
 
     update(dt: number) {

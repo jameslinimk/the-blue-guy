@@ -67,12 +67,12 @@ class SpiralEnemy implements Enemy {
         }
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
-        ctx.fillStyle = (this.station) ? "#FFFF90" : "#00FFFF"
-        ctx.shadowBlur = 4
-        ctx.shadowColor = "#000000"
-        ctx.fillRect(Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2), this.width, this.height)
-        ctx.shadowBlur = 0
+    draw() {
+        this.game.ctx.fillStyle = (this.station) ? "#FFFF90" : "#00FFFF"
+        this.game.ctx.shadowBlur = 4
+        this.game.ctx.shadowColor = "#000000"
+        this.game.ctx.fillRect(Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2), this.width, this.height)
+        this.game.ctx.shadowBlur = 0
     }
 }
 

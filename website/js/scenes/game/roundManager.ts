@@ -51,18 +51,18 @@ class DungeonManager {
         }
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
+    draw() {
         if (this.currentRoomObject !== "0" && this.currentRoomObject !== null) {
             switch (this.currentRoomObject.type) {
                 case "dungeon":
-                    this.currentRoomObject.dungeonRounds.crates.forEach(crate => crate.draw(ctx))
-                    this.game.bullets.forEach(bullet => bullet.draw(ctx))
-                    this.game.rays.forEach(ray => ray.draw(ctx))
-                    this.game.balls.forEach(ball => ball.draw(ctx))
-                    this.game.enemies.forEach(enemy => enemy.draw(ctx))
+                    this.currentRoomObject.dungeonRounds.crates.forEach(crate => crate.draw())
+                    this.game.bullets.forEach(bullet => bullet.draw())
+                    this.game.rays.forEach(ray => ray.draw())
+                    this.game.balls.forEach(ball => ball.draw())
+                    this.game.enemies.forEach(enemy => enemy.draw())
                     break
                 case "shop":
-                    this.currentRoomObject.shopRoom.draw(ctx)
+                    this.currentRoomObject.shopRoom.draw()
                     break
             }
         }

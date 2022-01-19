@@ -129,7 +129,8 @@ exports.config = void 0;
 const config = {
     fps: 60,
     height: 750,
-    width: 750
+    width: 750,
+    fullscreen: true
 };
 exports.config = config;
 
@@ -213,6 +214,10 @@ document.onmouseup = (event) => {
  */
 const wait = (time) => new Promise((resolve, _) => setTimeout(resolve, time));
 exports.wait = wait;
+/**
+ * Detect weather the userAgent is mobile device or not. (This is not 100% accurate so use with caution)
+ * @returns is userAgent mobile
+ */
 function detectMobile() {
     const a = (navigator.userAgent || navigator.vendor || window.opera);
     if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(a) || /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0, 4))) {
@@ -230,7 +235,7 @@ async function play(startingScene, fps, canvas) {
     let t = performance.now();
     let timeLastFrame = t;
     let scene = startingScene;
-    startingScene.canvas = canvas;
+    scene.ctx = ctx;
     while (scene !== null) {
         // Delta time
         t = performance.now();
@@ -243,20 +248,17 @@ async function play(startingScene, fps, canvas) {
         startingScene.processInput(events, pressedKeys, deltaTime);
         startingScene.update(deltaTime);
         ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear screen
-        startingScene.draw(ctx);
+        startingScene.draw();
         scene = startingScene.next; // Set next scene
-        if (!scene.canvas)
-            scene.canvas = canvas;
+        if (!scene.ctx)
+            scene.ctx = ctx;
         await wait(1000 / fps);
     }
 }
 exports.play = play;
 class BaseScene {
     next;
-    /**
-     * Canvas will be automatically set by the {@link play} function
-     */
-    canvas;
+    ctx;
     constructor() {
         this.next = this;
     }
@@ -292,7 +294,7 @@ class BaseScene {
      * Will be called last after {@link BaseScene.processInput} and {@link BaseScene.update}
      * @param ctx {@link CanvasRenderingContext2D} of game window
      */
-    draw(ctx) {
+    draw() {
         throw new Error("draw wasn't overridden");
     }
 }
@@ -322,13 +324,24 @@ const game_2 = require("./scenes/game");
 const canvas = document.getElementById("game");
 if (!canvas)
     throw new Error("Canvas \"game\" not found!");
-if (canvas.width != config_1.config.width)
-    throw new Error("Canvas \"game\" width doesn't match the config!");
-if (canvas.height != config_1.config.height)
-    throw new Error("Canvas \"game\" height doesn't match the config!");
-console.log((0, game_1.detectMobile)());
-if ((0, game_1.detectMobile)())
-    alert("A mobile device has been detected. This game requires a keyboard to move. Touch to shoot is available, but not recommended.");
+canvas.width = config_1.config.width;
+canvas.height = config_1.config.height;
+if (config_1.config.fullscreen) {
+    const resizeWindow = () => {
+        if (window.innerWidth === window.innerHeight) {
+            canvas.style.width = "100%";
+            canvas.style.height = "100%";
+        }
+        else {
+            canvas.style.width = `${Math.min(window.innerWidth, window.innerHeight)}`;
+            canvas.style.height = `${Math.min(window.innerWidth, window.innerHeight)}`;
+            console.log("📓 ~ file: index.ts ~ line 17 ~ canvas.style.height", Math.min(window.innerWidth, window.innerHeight));
+        }
+    };
+    resizeWindow();
+    window.onresize = resizeWindow;
+}
+// if (detectMobile()) alert("A mobile device has been detected. This game requires a keyboard to move. Touch to shoot is available, but not recommended.")
 (0, game_1.play)(new game_2.GameScene(), config_1.config.fps, canvas);
 
 },{"./config":4,"./game":5,"./scenes/game":8}],8:[function(require,module,exports){
@@ -468,9 +481,13 @@ class GameScene extends game_1.BaseScene {
             switch (event.eventType) {
                 case "MouseMove":
                     event = event;
-                    // Set relative to canvas window
-                    const rect = this.canvas?.getBoundingClientRect();
-                    this.mouse = { x: event.raw.clientX - rect.left, y: event.raw.clientY - rect.top };
+                    // Get mouse relative to canvas element
+                    if (!this.ctx.canvas)
+                        break;
+                    const rect = this.ctx.canvas.getBoundingClientRect();
+                    const scaleX = this.ctx.canvas.width / rect.width;
+                    const scaleY = this.ctx.canvas.height / rect.height;
+                    this.mouse = { x: (event.raw.clientX - rect.left) * scaleX, y: (event.raw.clientY - rect.top) * scaleY };
                     break;
                 case "MouseDown":
                     if (this.paused || shot)
@@ -484,7 +501,7 @@ class GameScene extends game_1.BaseScene {
                     event = event;
                     switch (event.key.toLowerCase()) {
                         case "f":
-                            this.canvas.requestFullscreen();
+                            this.ctx.canvas.requestFullscreen();
                             break;
                         case "i":
                             if (this.paused)
@@ -531,16 +548,16 @@ class GameScene extends game_1.BaseScene {
         this.showInventoryAnimation.update(dt);
         this.hideInventoryAnimation.update(dt);
     }
-    draw(ctx) {
+    draw() {
         // Background
-        ctx.fillStyle = "#5a6988";
-        ctx.fillRect(0, 0, config_1.config.width, config_1.config.height);
+        this.ctx.fillStyle = "#5a6988";
+        this.ctx.fillRect(0, 0, config_1.config.width, config_1.config.height);
         /* --------------------------------- Dungeon -------------------------------- */
-        this.dungeonManager.draw(ctx);
+        this.dungeonManager.draw();
         /* -------------------------------- Universal ------------------------------- */
-        this.player.draw(ctx);
-        (0, hud_1.drawHud)(ctx, this);
-        this.map.draw(ctx);
+        this.player.draw();
+        (0, hud_1.drawHud)(this.ctx, this);
+        this.map.draw();
     }
     getTicks() {
         return performance.now();
@@ -606,12 +623,12 @@ class Bullet {
             this.game.bullets = this.game.bullets.filter(bullet => bullet.id != this.id);
         }
     }
-    draw(ctx) {
-        ctx.shadowBlur = 5;
-        ctx.shadowColor = "#000000";
-        ctx.fillStyle = (this.hitPlayer) ? "#8d1b1f" : "#0000FF";
-        ctx.fillRect(Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.width / 2), this.width, this.height);
-        ctx.shadowBlur = 0;
+    draw() {
+        this.game.ctx.shadowBlur = 5;
+        this.game.ctx.shadowColor = "#000000";
+        this.game.ctx.fillStyle = (this.hitPlayer) ? "#8d1b1f" : "#0000FF";
+        this.game.ctx.fillRect(Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.width / 2), this.width, this.height);
+        this.game.ctx.shadowBlur = 0;
     }
 }
 exports.Bullet = Bullet;
@@ -670,8 +687,8 @@ class Crate {
             });
         }
     }
-    draw(ctx) {
-        ctx.drawImage(this.image.image, Math.round(this.location.x - this.image.image.width / 2), Math.round(this.location.y - this.image.image.width / 2));
+    draw() {
+        this.game.ctx.drawImage(this.image.image, Math.round(this.location.x - this.image.image.width / 2), Math.round(this.location.y - this.image.image.width / 2));
     }
     /**
      * Only for **HEALTH** or **AMMO**
@@ -1038,18 +1055,18 @@ class Ball {
             }
         }
     }
-    draw(ctx) {
-        ctx.fillStyle = "#FFFFFF";
-        ctx.beginPath();
-        ctx.arc(this.location.x, this.location.y, this.radius + 2, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = "#FD0100";
-        ctx.fillStyle = "#8d1b1f";
-        ctx.beginPath();
-        ctx.arc(this.location.x, this.location.y, this.radius, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.shadowBlur = 0;
+    draw() {
+        this.game.ctx.fillStyle = "#FFFFFF";
+        this.game.ctx.beginPath();
+        this.game.ctx.arc(this.location.x, this.location.y, this.radius + 2, 0, 2 * Math.PI);
+        this.game.ctx.fill();
+        this.game.ctx.shadowBlur = 15;
+        this.game.ctx.shadowColor = "#FD0100";
+        this.game.ctx.fillStyle = "#8d1b1f";
+        this.game.ctx.beginPath();
+        this.game.ctx.arc(this.location.x, this.location.y, this.radius, 0, 2 * Math.PI);
+        this.game.ctx.fill();
+        this.game.ctx.shadowBlur = 0;
     }
 }
 exports.Ball = Ball;
@@ -1096,12 +1113,12 @@ class BallEnemy {
         }
         return false;
     }
-    draw(ctx) {
-        ctx.fillStyle = "#FFFF00";
-        ctx.shadowBlur = 4;
-        ctx.shadowColor = "#000000";
-        ctx.fillRect(Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2), this.width, this.height);
-        ctx.shadowBlur = 0;
+    draw() {
+        this.game.ctx.fillStyle = "#FFFF00";
+        this.game.ctx.shadowBlur = 4;
+        this.game.ctx.shadowColor = "#000000";
+        this.game.ctx.fillRect(Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2), this.width, this.height);
+        this.game.ctx.shadowBlur = 0;
     }
     update(dt) {
         if ((0, angles_1.distance)(this.location, this.game.player.location) > this.range) {
@@ -1283,37 +1300,37 @@ class Ray {
             }
         }
     }
-    draw(ctx) {
+    draw() {
         switch (this.state) {
             case "wind":
-                ctx.beginPath();
-                ctx.moveTo(this.location.x, this.location.y);
-                ctx.strokeStyle = "#808080";
-                ctx.lineWidth = 2;
-                ctx.lineTo(this.destinationX, this.destinationY);
-                ctx.stroke();
+                this.game.ctx.beginPath();
+                this.game.ctx.moveTo(this.location.x, this.location.y);
+                this.game.ctx.strokeStyle = "#808080";
+                this.game.ctx.lineWidth = 2;
+                this.game.ctx.lineTo(this.destinationX, this.destinationY);
+                this.game.ctx.stroke();
                 if (!this.disableBall) {
-                    ctx.fillStyle = "#8d1b1f";
-                    ctx.beginPath();
-                    ctx.arc(this.location.x, this.location.y, 10, 0, 2 * Math.PI);
-                    ctx.fill();
+                    this.game.ctx.fillStyle = "#8d1b1f";
+                    this.game.ctx.beginPath();
+                    this.game.ctx.arc(this.location.x, this.location.y, 10, 0, 2 * Math.PI);
+                    this.game.ctx.fill();
                 }
                 break;
             case "fire":
-                ctx.beginPath();
-                ctx.moveTo(this.location.x, this.location.y);
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = "#FD0100";
-                ctx.strokeStyle = "#8d1b1f";
-                ctx.lineWidth = 10;
-                ctx.lineTo(this.destinationX, this.destinationY);
-                ctx.stroke();
-                ctx.shadowBlur = 0;
+                this.game.ctx.beginPath();
+                this.game.ctx.moveTo(this.location.x, this.location.y);
+                this.game.ctx.shadowBlur = 15;
+                this.game.ctx.shadowColor = "#FD0100";
+                this.game.ctx.strokeStyle = "#8d1b1f";
+                this.game.ctx.lineWidth = 10;
+                this.game.ctx.lineTo(this.destinationX, this.destinationY);
+                this.game.ctx.stroke();
+                this.game.ctx.shadowBlur = 0;
                 if (!this.disableBall) {
-                    ctx.fillStyle = "#8d1b1f";
-                    ctx.beginPath();
-                    ctx.arc(this.location.x, this.location.y, 10, 0, 2 * Math.PI);
-                    ctx.fill();
+                    this.game.ctx.fillStyle = "#8d1b1f";
+                    this.game.ctx.beginPath();
+                    this.game.ctx.arc(this.location.x, this.location.y, 10, 0, 2 * Math.PI);
+                    this.game.ctx.fill();
                 }
                 break;
             default:
@@ -1366,11 +1383,11 @@ class RangedEnemy {
         }
         return false;
     }
-    draw(ctx) {
-        ctx.shadowBlur = 4;
-        ctx.shadowColor = "#000000";
-        ctx.drawImage(this.game.rangedEnemyImage.image, Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2));
-        ctx.shadowBlur = 0;
+    draw() {
+        this.game.ctx.shadowBlur = 4;
+        this.game.ctx.shadowColor = "#000000";
+        this.game.ctx.drawImage(this.game.rangedEnemyImage.image, Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2));
+        this.game.ctx.shadowBlur = 0;
     }
     update(dt) {
         if ((0, angles_1.distance)(this.location, this.game.player.location) > this.range) {
@@ -1486,12 +1503,12 @@ class SpiralEnemy {
             this.game.bulletId += 1;
         }
     }
-    draw(ctx) {
-        ctx.fillStyle = (this.station) ? "#FFFF90" : "#00FFFF";
-        ctx.shadowBlur = 4;
-        ctx.shadowColor = "#000000";
-        ctx.fillRect(Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2), this.width, this.height);
-        ctx.shadowBlur = 0;
+    draw() {
+        this.game.ctx.fillStyle = (this.station) ? "#FFFF90" : "#00FFFF";
+        this.game.ctx.shadowBlur = 4;
+        this.game.ctx.shadowColor = "#000000";
+        this.game.ctx.fillRect(Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2), this.width, this.height);
+        this.game.ctx.shadowBlur = 0;
     }
 }
 exports.SpiralEnemy = SpiralEnemy;
@@ -1662,13 +1679,13 @@ class Map {
             }
         }
     }
-    draw(ctx) {
+    draw() {
         if (this.game.dungeonManager.layout === null)
             return;
         if (this.mapNavigator) {
-            ctx.fillStyle = "#000000";
-            ctx.fillRect(0, 0, config_1.config.width, config_1.config.height);
-            this.drawMap(ctx);
+            this.game.ctx.fillStyle = "#000000";
+            this.game.ctx.fillRect(0, 0, config_1.config.width, config_1.config.height);
+            this.drawMap(this.game.ctx);
         }
     }
     processInput(events) {
@@ -1865,21 +1882,21 @@ class Player {
             this.lastHit = this.game.getTicks();
         }
     }
-    draw(ctx) {
+    draw() {
         if (this.dashing) {
-            ctx.beginPath();
-            ctx.moveTo(Math.round(this.location.x), Math.round(this.location.y));
-            ctx.strokeStyle = "#0000FF";
-            ctx.lineWidth = 10;
-            ctx.shadowColor = "#0000FF";
-            ctx.shadowBlur = 2;
-            ctx.lineTo(Math.round(this.dashOrigin.x), Math.round(this.dashOrigin.y));
-            ctx.stroke();
+            this.game.ctx.beginPath();
+            this.game.ctx.moveTo(Math.round(this.location.x), Math.round(this.location.y));
+            this.game.ctx.strokeStyle = "#0000FF";
+            this.game.ctx.lineWidth = 10;
+            this.game.ctx.shadowColor = "#0000FF";
+            this.game.ctx.shadowBlur = 2;
+            this.game.ctx.lineTo(Math.round(this.dashOrigin.x), Math.round(this.dashOrigin.y));
+            this.game.ctx.stroke();
         }
-        ctx.shadowColor = "#000000";
-        ctx.shadowBlur = 5;
-        ctx.drawImage((!this.dashing) ? this.image.image : this.dashingImage.image, Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2));
-        ctx.shadowBlur = 0;
+        this.game.ctx.shadowColor = "#000000";
+        this.game.ctx.shadowBlur = 5;
+        this.game.ctx.drawImage((!this.dashing) ? this.image.image : this.dashingImage.image, Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2));
+        this.game.ctx.shadowBlur = 0;
     }
     update(dt) {
         this.dashAnimation.update(dt);
@@ -1991,13 +2008,18 @@ const guns_1 = require("../guns");
 class ShopRoom {
     items;
     game;
+    hoveredItem;
     constructor(items, game) {
         this.items = items;
         this.game = game;
     }
     update() {
     }
-    draw(ctx) {
+    processInput(events) {
+        events.filter(event => event.eventType === "KeyUp" && (event.key === "e" || event.key === "E")).forEach(event => {
+        });
+    }
+    draw() {
         let totalWidth = 0;
         for (let i = 0; i < this.items.length; i++)
             totalWidth += 50 * i + 10 * i;
@@ -2031,16 +2053,15 @@ class ShopRoom {
                 }
             }
             /* ------------------------------- Background ------------------------------- */
-            ctx.fillStyle = "#049301";
-            ctx.fillRect((config_1.config.width / 2 + 50 * i + 10 * i) - totalWidth / 2, 200, 50, 50);
-            ctx.fillStyle = "#C0C0C0";
-            ctx.drawImage(this.game.frameImage.image, (config_1.config.width / 2 + 50 * i + 10 * i) - totalWidth / 2 + 16, 200 - 16, 32, 32);
-            ctx.drawImage(image, (config_1.config.width / 2 + 50 * i + 10 * i) - totalWidth / 2 + 16, 200 - 16, 32, 32);
+            this.game.ctx.fillStyle = "#049301";
+            this.game.ctx.fillRect((config_1.config.width / 2 + 50 * i + 10 * i) - totalWidth / 2, 200, 50, 50);
+            // ctx.drawImage(this.game.frameImage.image, (config.width / 2 + 50 * i + 10 * i) - totalWidth / 2 + 16, 200 - 16, 32, 32)
+            this.game.ctx.drawImage(image, (config_1.config.width / 2 + 50 * i + 10 * i) - totalWidth / 2, 200, 32, 32);
         }
         /* -------------------------------- Shop guy -------------------------------- */
-        ctx.drawImage(this.game.shopGuyImage.image, (config_1.config.width / 2 + 50 * this.items.length + 10 * this.items.length) - totalWidth / 2 + 32, 200 - 32);
+        this.game.ctx.drawImage(this.game.shopGuyImage.image, (config_1.config.width / 2 + 50 * this.items.length + 10 * this.items.length) - totalWidth / 2 + 32, 200 - 32);
         /* ------------------------------ Target dummy ------------------------------ */
-        ctx.drawImage(this.game.dummyImage.image, config_1.config.width - 100, config_1.config.height - 100);
+        this.game.ctx.drawImage(this.game.dummyImage.image, config_1.config.width - 100, config_1.config.height - 100);
     }
 }
 exports.ShopRoom = ShopRoom;
@@ -2097,18 +2118,18 @@ class DungeonManager {
             }
         }
     }
-    draw(ctx) {
+    draw() {
         if (this.currentRoomObject !== "0" && this.currentRoomObject !== null) {
             switch (this.currentRoomObject.type) {
                 case "dungeon":
-                    this.currentRoomObject.dungeonRounds.crates.forEach(crate => crate.draw(ctx));
-                    this.game.bullets.forEach(bullet => bullet.draw(ctx));
-                    this.game.rays.forEach(ray => ray.draw(ctx));
-                    this.game.balls.forEach(ball => ball.draw(ctx));
-                    this.game.enemies.forEach(enemy => enemy.draw(ctx));
+                    this.currentRoomObject.dungeonRounds.crates.forEach(crate => crate.draw());
+                    this.game.bullets.forEach(bullet => bullet.draw());
+                    this.game.rays.forEach(ray => ray.draw());
+                    this.game.balls.forEach(ball => ball.draw());
+                    this.game.enemies.forEach(enemy => enemy.draw());
                     break;
                 case "shop":
-                    this.currentRoomObject.shopRoom.draw(ctx);
+                    this.currentRoomObject.shopRoom.draw();
                     break;
             }
         }

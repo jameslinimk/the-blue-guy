@@ -56,8 +56,8 @@ class Crate {
         }
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
-        ctx.drawImage(this.image.image, Math.round(this.location.x - this.image.image.width / 2), Math.round(this.location.y - this.image.image.width / 2))
+    draw() {
+        this.game.ctx.drawImage(this.image.image, Math.round(this.location.x - this.image.image.width / 2), Math.round(this.location.y - this.image.image.width / 2))
     }
 
     /**

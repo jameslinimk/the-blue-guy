@@ -78,19 +78,19 @@ class Ball {
         }
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
-        ctx.fillStyle = "#FFFFFF"
-        ctx.beginPath()
-        ctx.arc(this.location.x, this.location.y, this.radius + 2, 0, 2 * Math.PI)
-        ctx.fill()
+    draw() {
+        this.game.ctx.fillStyle = "#FFFFFF"
+        this.game.ctx.beginPath()
+        this.game.ctx.arc(this.location.x, this.location.y, this.radius + 2, 0, 2 * Math.PI)
+        this.game.ctx.fill()
 
-        ctx.shadowBlur = 15
-        ctx.shadowColor = "#FD0100"
-        ctx.fillStyle = "#8d1b1f"
-        ctx.beginPath()
-        ctx.arc(this.location.x, this.location.y, this.radius, 0, 2 * Math.PI)
-        ctx.fill()
-        ctx.shadowBlur = 0
+        this.game.ctx.shadowBlur = 15
+        this.game.ctx.shadowColor = "#FD0100"
+        this.game.ctx.fillStyle = "#8d1b1f"
+        this.game.ctx.beginPath()
+        this.game.ctx.arc(this.location.x, this.location.y, this.radius, 0, 2 * Math.PI)
+        this.game.ctx.fill()
+        this.game.ctx.shadowBlur = 0
     }
 }
 
@@ -144,12 +144,12 @@ class BallEnemy implements Enemy {
         return false
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
-        ctx.fillStyle = "#FFFF00"
-        ctx.shadowBlur = 4
-        ctx.shadowColor = "#000000"
-        ctx.fillRect(Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2), this.width, this.height)
-        ctx.shadowBlur = 0
+    draw() {
+        this.game.ctx.fillStyle = "#FFFF00"
+        this.game.ctx.shadowBlur = 4
+        this.game.ctx.shadowColor = "#000000"
+        this.game.ctx.fillRect(Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2), this.width, this.height)
+        this.game.ctx.shadowBlur = 0
     }
 
     update(dt: number): void {

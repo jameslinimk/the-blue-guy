@@ -172,39 +172,39 @@ class Ray {
         }
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
+    draw() {
         switch (this.state) {
             case "wind":
-                ctx.beginPath()
-                ctx.moveTo(this.location.x, this.location.y)
-                ctx.strokeStyle = "#808080"
-                ctx.lineWidth = 2
-                ctx.lineTo(this.destinationX, this.destinationY)
-                ctx.stroke()
+                this.game.ctx.beginPath()
+                this.game.ctx.moveTo(this.location.x, this.location.y)
+                this.game.ctx.strokeStyle = "#808080"
+                this.game.ctx.lineWidth = 2
+                this.game.ctx.lineTo(this.destinationX, this.destinationY)
+                this.game.ctx.stroke()
 
                 if (!this.disableBall) {
-                    ctx.fillStyle = "#8d1b1f"
-                    ctx.beginPath()
-                    ctx.arc(this.location.x, this.location.y, 10, 0, 2 * Math.PI)
-                    ctx.fill()
+                    this.game.ctx.fillStyle = "#8d1b1f"
+                    this.game.ctx.beginPath()
+                    this.game.ctx.arc(this.location.x, this.location.y, 10, 0, 2 * Math.PI)
+                    this.game.ctx.fill()
                 }
                 break
             case "fire":
-                ctx.beginPath()
-                ctx.moveTo(this.location.x, this.location.y)
-                ctx.shadowBlur = 15
-                ctx.shadowColor = "#FD0100"
-                ctx.strokeStyle = "#8d1b1f"
-                ctx.lineWidth = 10
-                ctx.lineTo(this.destinationX, this.destinationY)
-                ctx.stroke()
-                ctx.shadowBlur = 0
+                this.game.ctx.beginPath()
+                this.game.ctx.moveTo(this.location.x, this.location.y)
+                this.game.ctx.shadowBlur = 15
+                this.game.ctx.shadowColor = "#FD0100"
+                this.game.ctx.strokeStyle = "#8d1b1f"
+                this.game.ctx.lineWidth = 10
+                this.game.ctx.lineTo(this.destinationX, this.destinationY)
+                this.game.ctx.stroke()
+                this.game.ctx.shadowBlur = 0
 
                 if (!this.disableBall) {
-                    ctx.fillStyle = "#8d1b1f"
-                    ctx.beginPath()
-                    ctx.arc(this.location.x, this.location.y, 10, 0, 2 * Math.PI)
-                    ctx.fill()
+                    this.game.ctx.fillStyle = "#8d1b1f"
+                    this.game.ctx.beginPath()
+                    this.game.ctx.arc(this.location.x, this.location.y, 10, 0, 2 * Math.PI)
+                    this.game.ctx.fill()
                 }
                 break
             default:
@@ -264,11 +264,11 @@ class RangedEnemy implements Enemy {
         return false
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
-        ctx.shadowBlur = 4
-        ctx.shadowColor = "#000000"
-        ctx.drawImage(this.game.rangedEnemyImage.image, Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2))
-        ctx.shadowBlur = 0
+    draw() {
+        this.game.ctx.shadowBlur = 4
+        this.game.ctx.shadowColor = "#000000"
+        this.game.ctx.drawImage(this.game.rangedEnemyImage.image, Math.round(this.location.x - this.width / 2), Math.round(this.location.y - this.height / 2))
+        this.game.ctx.shadowBlur = 0
     }
 
     update(dt: number): void {
