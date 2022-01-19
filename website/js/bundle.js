@@ -139,6 +139,7 @@ exports.config = config;
 // Key keeper
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.detectMobile = exports.wait = exports.play = exports.BaseScene = void 0;
+const config_1 = require("./config");
 const pressedKeys = new Map();
 let eventQueue = [];
 // EVENTS
@@ -189,12 +190,16 @@ document.onkeyup = (event) => {
     });
 };
 document.onmousemove = (event) => {
+    if (!getMousePos(event))
+        return;
     eventQueue.push({
         eventType: "MouseMove",
         raw: event
     });
 };
 document.onmousedown = (event) => {
+    if (!getMousePos(event))
+        return;
     pressedKeys.set((event.button === 0) ? "Mouse Left" : (event.button === 1) ? "Mouse Middle" : (event.button === 2) ? "Mouse Right" : "Mouse Unknown", true);
     eventQueue.push({
         eventType: "MouseDown",
@@ -202,6 +207,8 @@ document.onmousedown = (event) => {
     });
 };
 document.onmouseup = (event) => {
+    if (!getMousePos(event))
+        return;
     pressedKeys.set((event.button === 0) ? "Mouse Left" : (event.button === 1) ? "Mouse Middle" : (event.button === 2) ? "Mouse Right" : "Mouse Unknown", false);
     eventQueue.push({
         eventType: "MouseUp",
@@ -226,11 +233,20 @@ function detectMobile() {
     return false;
 }
 exports.detectMobile = detectMobile;
+function getMousePos(event) {
+    const rect = ctx.canvas.getBoundingClientRect();
+    const x = (event.clientX - rect.left) * (ctx.canvas.width / rect.width);
+    const y = (event.clientY - rect.top) * (ctx.canvas.height / rect.height);
+    if (x < 0 || x > config_1.config.width || y < 0 || y > config_1.config.height)
+        return;
+    return { x: x, y: y };
+}
+let ctx;
 /**
  * Start the game
  */
 async function play(startingScene, fps, canvas) {
-    const ctx = canvas.getContext("2d");
+    ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
     let t = performance.now();
     let timeLastFrame = t;
@@ -247,10 +263,7 @@ async function play(startingScene, fps, canvas) {
         // Update mouse position
         events.filter(event => event.eventType === "MouseMove").forEach((event) => {
             event = event;
-            const rect = ctx.canvas.getBoundingClientRect();
-            const scaleX = ctx.canvas.width / rect.width;
-            const scaleY = ctx.canvas.height / rect.height;
-            scene.mouse = { x: (event.raw.clientX - rect.left) * scaleX, y: (event.raw.clientY - rect.top) * scaleY };
+            scene.mouse = getMousePos(event.raw);
         });
         // Send data to the scene
         startingScene.processInput(events, pressedKeys, deltaTime);
@@ -310,7 +323,7 @@ class BaseScene {
 }
 exports.BaseScene = BaseScene;
 
-},{}],6:[function(require,module,exports){
+},{"./config":4}],6:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CustomImage = void 0;

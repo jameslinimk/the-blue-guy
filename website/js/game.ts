@@ -1,6 +1,7 @@
 // Key keeper
 
 import { Coordinates } from "./angles"
+import { config } from "./config"
 
 /**
  * Map of every keys `.key` ([docs](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/)) that is pressed
@@ -67,6 +68,8 @@ document.onkeyup = (event) => {
 }
 
 document.onmousemove = (event) => {
+    if (!getMousePos(event)) return
+
     eventQueue.push(<MouseMoveEvent>{
         eventType: "MouseMove",
         raw: event
@@ -74,6 +77,8 @@ document.onmousemove = (event) => {
 }
 
 document.onmousedown = (event) => {
+    if (!getMousePos(event)) return
+
     pressedKeys.set((event.button === 0) ? "Mouse Left" : (event.button === 1) ? "Mouse Middle" : (event.button === 2) ? "Mouse Right" : "Mouse Unknown", true)
 
     eventQueue.push(<MouseDownEvent>{
@@ -83,6 +88,8 @@ document.onmousedown = (event) => {
 }
 
 document.onmouseup = (event) => {
+    if (!getMousePos(event)) return
+
     pressedKeys.set((event.button === 0) ? "Mouse Left" : (event.button === 1) ? "Mouse Middle" : (event.button === 2) ? "Mouse Right" : "Mouse Unknown", false)
 
     eventQueue.push(<MouseUpEvent>{
@@ -161,11 +168,22 @@ function detectMobile() {
     return false
 }
 
+function getMousePos(event: MouseEvent) {
+    const rect = ctx.canvas.getBoundingClientRect()
+    const x = (event.clientX - rect.left) * (ctx.canvas.width / rect.width)
+    const y = (event.clientY - rect.top) * (ctx.canvas.height / rect.height)
+
+    if (x < 0 || x > config.width || y < 0 || y > config.height) return
+    return <Coordinates>{ x: x, y: y }
+}
+
+let ctx: CanvasRenderingContext2D
+
 /**
  * Start the game
  */
 async function play(startingScene: BaseScene, fps: number, canvas: HTMLCanvasElement) {
-    const ctx = canvas.getContext("2d")
+    ctx = canvas.getContext("2d")
     ctx.imageSmoothingEnabled = false
 
     let t = performance.now()
@@ -186,11 +204,7 @@ async function play(startingScene: BaseScene, fps: number, canvas: HTMLCanvasEle
         // Update mouse position
         events.filter(event => event.eventType === "MouseMove").forEach((event) => {
             event = <MouseMoveEvent>event
-            const rect = ctx.canvas.getBoundingClientRect()
-            const scaleX = ctx.canvas.width / rect.width
-            const scaleY = ctx.canvas.height / rect.height
-
-            scene.mouse = { x: (event.raw.clientX - rect.left) * scaleX, y: (event.raw.clientY - rect.top) * scaleY }
+            scene.mouse = getMousePos(event.raw)
         })
 
         // Send data to the scene
