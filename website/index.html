@@ -16,18 +16,33 @@
 
     <link rel="icon" type="image/x-icon" href="./images/favicon.ico">
     <script src="./js/bundle.js" defer></script>
+    <style>
+        .centerChildren {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game {
+            cursor: none;
+            user-select: none;
+            -moz-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+        }
+
+        .volumeSlider {
+            position: absolute;
+            width: 100px;
+            height: 300px;
+        }
+    </style>
 </head>
 
 <body style="overflow: hidden">
-    <div class="canvas-container" style="display: flex; align-items: center; justify-content: center;">
-        <canvas id="game"
-            style="cursor:none;user-select: none; -moz-user-select: none; -webkit-user-select: none; -ms-user-select: none;"></canvas>
-        <label class="label" style="text-align: center;">
-            <span class="field"
-                style="font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif; font-size: small;">Volume</span>
-            </br>
-            <input id="volumeControl" type="range" min="0" max="100" step="1" value="100">
-        </label>
+    <div class="centerChildren">
+        <canvas id="game" class="game"></canvas>
+        <input id="volumeControl" type="range" min="0" max="100" step="1" value="100" class="volumeSlider">
     </div>
 </body>
 

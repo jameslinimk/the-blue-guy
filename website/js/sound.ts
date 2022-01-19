@@ -14,6 +14,13 @@ class SoundVolume {
 }
 const volume = new SoundVolume()
 
+const button = <HTMLInputElement>document.getElementById("volumeControl")
+if (button) {
+    const changeVolume = () => volume.volume = parseInt(button.value) / 100
+    button.oninput = changeVolume
+    button.onchange = changeVolume
+}
+
 class Sound {
     sound: HTMLAudioElement
 
