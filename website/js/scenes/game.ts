@@ -1,7 +1,6 @@
-import { Coordinates } from "../angles"
 import { CustomAnimation } from "../animations"
 import { config } from "../config"
-import { BaseScene, Events, KeyDownEvent, MouseDownEvent, MouseMoveEvent, PressedKeys } from "../game"
+import { BaseScene, Events, KeyDownEvent, MouseDownEvent, PressedKeys } from "../game"
 import { CustomImage } from "../image"
 import { Sound } from "../sound"
 import { Bullet } from "./game/bullet"
@@ -25,7 +24,6 @@ function clamp(number: number, min: number, max: number) {
 class GameScene extends BaseScene {
     /* ---------------------------------- Misc ---------------------------------- */
     player: Player
-    mouse: Coordinates
     systemMessages: SystemMessage[]
     systemMessagesId: number
 
@@ -88,7 +86,6 @@ class GameScene extends BaseScene {
         super()
 
         this.player = new Player(config.width / 2, config.height - 50, this)
-        this.mouse = { x: 0, y: 0 }
         this.systemMessages = []
         this.systemMessagesId = 0
 
@@ -154,18 +151,6 @@ class GameScene extends BaseScene {
         let shot = !this.paused && this.player.gun.holdable && pressedKeys.get("Mouse Left") && this.getTicks() >= this.lastShot + this.player.gun.shootDelay
         events.forEach(event => {
             switch (event.eventType) {
-                case "MouseMove":
-                    event = <MouseMoveEvent>event
-
-                    // Get mouse relative to canvas element
-                    if (!this.ctx.canvas) break
-                    const rect = this.ctx.canvas.getBoundingClientRect()
-                    const scaleX = this.ctx.canvas.width / rect.width
-                    const scaleY = this.ctx.canvas.height / rect.height
-
-                    this.mouse = { x: (event.raw.clientX - rect.left) * scaleX, y: (event.raw.clientY - rect.top) * scaleY }
-                    break
-
                 case "MouseDown":
                     if (this.paused || shot) break
 

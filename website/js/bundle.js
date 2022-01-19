@@ -244,6 +244,14 @@ async function play(startingScene, fps, canvas) {
         // Processing new events
         const events = eventQueue;
         eventQueue = []; // Clear event queue
+        // Update mouse position
+        events.filter(event => event.eventType === "MouseMove").forEach((event) => {
+            event = event;
+            const rect = ctx.canvas.getBoundingClientRect();
+            const scaleX = ctx.canvas.width / rect.width;
+            const scaleY = ctx.canvas.height / rect.height;
+            scene.mouse = { x: (event.raw.clientX - rect.left) * scaleX, y: (event.raw.clientY - rect.top) * scaleY };
+        });
         // Send data to the scene
         startingScene.processInput(events, pressedKeys, deltaTime);
         startingScene.update(deltaTime);
@@ -259,8 +267,10 @@ exports.play = play;
 class BaseScene {
     next;
     ctx;
+    mouse;
     constructor() {
         this.next = this;
+        this.mouse = { x: 0, y: 0 };
     }
     /**
      * Will switch to `nextScene` next frame
@@ -362,7 +372,6 @@ exports.clamp = clamp;
 class GameScene extends game_1.BaseScene {
     /* ---------------------------------- Misc ---------------------------------- */
     player;
-    mouse;
     systemMessages;
     systemMessagesId;
     /* --------------------------------- Bullets -------------------------------- */
@@ -416,7 +425,6 @@ class GameScene extends game_1.BaseScene {
     constructor() {
         super();
         this.player = new player_1.Player(config_1.config.width / 2, config_1.config.height - 50, this);
-        this.mouse = { x: 0, y: 0 };
         this.systemMessages = [];
         this.systemMessagesId = 0;
         this.bullets = [];
@@ -472,16 +480,6 @@ class GameScene extends game_1.BaseScene {
         let shot = !this.paused && this.player.gun.holdable && pressedKeys.get("Mouse Left") && this.getTicks() >= this.lastShot + this.player.gun.shootDelay;
         events.forEach(event => {
             switch (event.eventType) {
-                case "MouseMove":
-                    event = event;
-                    // Get mouse relative to canvas element
-                    if (!this.ctx.canvas)
-                        break;
-                    const rect = this.ctx.canvas.getBoundingClientRect();
-                    const scaleX = this.ctx.canvas.width / rect.width;
-                    const scaleY = this.ctx.canvas.height / rect.height;
-                    this.mouse = { x: (event.raw.clientX - rect.left) * scaleX, y: (event.raw.clientY - rect.top) * scaleY };
-                    break;
                 case "MouseDown":
                     if (this.paused || shot)
                         break;

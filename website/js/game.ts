@@ -1,5 +1,7 @@
 // Key keeper
 
+import { Coordinates } from "./angles"
+
 /**
  * Map of every keys `.key` ([docs](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/)) that is pressed
  *  - `true` if key is down, `false` if key is up
@@ -181,6 +183,16 @@ async function play(startingScene: BaseScene, fps: number, canvas: HTMLCanvasEle
         const events = eventQueue
         eventQueue = [] // Clear event queue
 
+        // Update mouse position
+        events.filter(event => event.eventType === "MouseMove").forEach((event) => {
+            event = <MouseMoveEvent>event
+            const rect = ctx.canvas.getBoundingClientRect()
+            const scaleX = ctx.canvas.width / rect.width
+            const scaleY = ctx.canvas.height / rect.height
+
+            scene.mouse = { x: (event.raw.clientX - rect.left) * scaleX, y: (event.raw.clientY - rect.top) * scaleY }
+        })
+
         // Send data to the scene
         startingScene.processInput(events, pressedKeys, deltaTime)
         startingScene.update(deltaTime)
@@ -197,9 +209,11 @@ async function play(startingScene: BaseScene, fps: number, canvas: HTMLCanvasEle
 class BaseScene {
     next?: BaseScene
     ctx?: CanvasRenderingContext2D
+    mouse: Coordinates
 
     constructor() {
         this.next = this
+        this.mouse = { x: 0, y: 0 }
     }
 
     /**
