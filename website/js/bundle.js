@@ -155,26 +155,35 @@ exports.config = config;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Cookie = void 0;
 class Cookie {
-    static get(name) {
-        name = `${encodeURIComponent(name)}=`;
-        const startIndex = document.cookie.indexOf(name);
-        if (!(startIndex > -1))
-            return null;
-        let endIndex = document.cookie.indexOf(';', startIndex);
-        if (!(endIndex > -1))
-            endIndex = document.cookie.length;
-        return decodeURIComponent(document.cookie.substring(startIndex + name.length, endIndex));
+    /**
+     * Checks wether or not the browser supports localStorage
+     * @returns wether or not the browser supports localStorage
+     */
+    static check() {
+        return typeof window.localStorage !== "undefined";
     }
-    static set(name, value, expires) {
-        if (typeof value !== "string")
-            value = value.toString();
-        let cookieText = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`;
-        if (expires)
-            cookieText += `; expires=${expires.toUTCString()}`;
-        document.cookie = cookieText;
+    static get(name) {
+        return window.localStorage.getItem(name);
+    }
+    static set(name, value) {
+        window.localStorage.setItem(name, value);
     }
     static remove(name) {
-        this.set(name, "", new Date(0));
+        window.localStorage.removeItem(name);
+    }
+    static save(game) {
+        if (game.dungeonManager.currentRoomObject === null)
+            return;
+        Cookie.set("save", JSON.stringify({
+            layout: game.dungeonManager.layout,
+            location: game.dungeonManager.currentRoom,
+            playerData: {
+                coins: game.player.coins,
+                ammo: game.player.ammo,
+                guns: game.player.gunInventory
+            },
+            saveTime: Date.now()
+        }));
     }
 }
 exports.Cookie = Cookie;
@@ -387,6 +396,7 @@ exports.CustomImage = CustomImage;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const config_1 = require("./config");
+const cookies_1 = require("./cookies");
 const game_1 = require("./game");
 const game_2 = require("./scenes/game");
 const canvas = document.getElementById("game");
@@ -403,9 +413,11 @@ if (config_1.config.fullscreen) {
     window.onresize = resizeWindow;
 }
 // if (detectMobile()) alert("A mobile device has been (possibly) detected. This game requires a keyboard to move. Touch to shoot is available, but not recommended.")
+if (!cookies_1.Cookie.check())
+    alert("Your browser doesn't support local storage. Please use another browser, or else the game will break");
 (0, game_1.play)(new game_2.GameScene(), config_1.config.fps, canvas);
 
-},{"./config":4,"./game":6,"./scenes/game":9}],9:[function(require,module,exports){
+},{"./config":4,"./cookies":5,"./game":6,"./scenes/game":9}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.clamp = exports.random = exports.GameScene = void 0;
@@ -2418,7 +2430,7 @@ class SoundVolume {
     get volume() { return this._volume; }
     set volume(newVolume) {
         newVolume = Math.round((0, game_1.clamp)(newVolume, 0, 1) * 10) / 10;
-        cookies_1.Cookie.set("volume", newVolume);
+        cookies_1.Cookie.set("volume", newVolume.toString());
         this._volume = newVolume;
     }
     constructor() {

@@ -1,24 +1,58 @@
-class Cookie {
-    static get(name: string) {
-        name = `${encodeURIComponent(name)}=`
+import { Coordinates } from "./angles"
+import { GameScene } from "./scenes/game"
+import { Layout } from "./scenes/game/dungeonGenerator"
+import { AmmoInventory, GunInventory } from "./scenes/game/player"
 
-        const startIndex = document.cookie.indexOf(name)
-        if (!(startIndex > -1)) return null
-        let endIndex = document.cookie.indexOf(';', startIndex)
-        if (!(endIndex > -1)) endIndex = document.cookie.length
-        return decodeURIComponent(document.cookie.substring(startIndex + name.length, endIndex))
+interface PlayerData {
+    coins: number
+    ammo: AmmoInventory,
+    guns: GunInventory
+}
+
+interface Save {
+    layout: Layout
+    location: Coordinates
+    playerData: PlayerData
+    saveTime: number
+}
+
+class Cookie {
+    /**
+     * Checks wether or not the browser supports localStorage
+     * @returns wether or not the browser supports localStorage
+     */
+    static check() {
+        return typeof window.localStorage !== "undefined"
     }
 
-    static set(name: string, value: string | number | boolean, expires?: Date) {
-        if (typeof value !== "string") value = value.toString()
-        let cookieText = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`
-        if (expires) cookieText += `; expires=${expires.toUTCString()}`
-        document.cookie = cookieText
+    static get(name: string) {
+        return window.localStorage.getItem(name)
+    }
+
+    static set(name: string, value: string) {
+        window.localStorage.setItem(name, value)
     }
 
     static remove(name: string) {
-        this.set(name, "", new Date(0))
+        window.localStorage.removeItem(name)
     }
+
+    static save(game: GameScene) {
+        if (game.dungeonManager.currentRoomObject === null) return
+
+        Cookie.set("save", JSON.stringify(<Save>{
+            layout: game.dungeonManager.layout,
+            location: game.dungeonManager.currentRoom,
+            playerData: {
+                coins: game.player.coins,
+                ammo: game.player.ammo,
+                guns: game.player.gunInventory
+            },
+            saveTime: Date.now()
+        }))
+    }
+
+    // TODO Add loading feature
 }
 
 export {

@@ -282,6 +282,8 @@ class Player {
 }
 
 export {
-    Player
+    Player,
+    AmmoInventory,
+    GunInventory
 }
 

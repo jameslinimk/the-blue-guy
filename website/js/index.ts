@@ -1,4 +1,5 @@
 import { config } from "./config"
+import { Cookie } from "./cookies"
 import { play } from "./game"
 import { GameScene } from "./scenes/game"
 
@@ -16,5 +17,6 @@ if (config.fullscreen) {
     window.onresize = resizeWindow
 }
 // if (detectMobile()) alert("A mobile device has been (possibly) detected. This game requires a keyboard to move. Touch to shoot is available, but not recommended.")
+if (!Cookie.check()) alert("Your browser doesn't support local storage. Please use another browser, or else the game will break")
 
 play(new GameScene(), config.fps, canvas)

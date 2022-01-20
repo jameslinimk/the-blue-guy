@@ -6,7 +6,7 @@ class SoundVolume {
     get volume() { return this._volume }
     set volume(newVolume: number) {
         newVolume = Math.round(clamp(newVolume, 0, 1) * 10) / 10
-        Cookie.set("volume", newVolume)
+        Cookie.set("volume", newVolume.toString())
         this._volume = newVolume
     }
 
