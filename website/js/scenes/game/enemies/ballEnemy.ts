@@ -1,8 +1,6 @@
 import { Coordinates, distance, getAngle, project } from "../../../angles"
 import { config } from "../../../config"
 import { GameScene, random } from "../../game"
-import { Crate } from "../crate"
-import { Room } from "../dungeonGenerator"
 import { Enemy } from "./enemy"
 import { Ray } from "./rangedEnemy"
 
@@ -94,54 +92,25 @@ class Ball {
     }
 }
 
-class BallEnemy implements Enemy {
-    location: Coordinates
-    width: number
-    height: number
+class BallEnemy extends Enemy {
     speed: number
-    id: number
-    health: number
-    maxHealth: number
 
     range: number
     shotCooldown: number
     lastShot: number
 
-    // balls: number[]
-    game: GameScene
-
     constructor(x: number, y: number, id: number, game: GameScene) {
-        this.location = { x: x, y: y }
+        super(x, y, id, game)
+
         this.width = 30
         this.height = 30
         this.speed = 0.05
-        this.id = id
         this.maxHealth = 50
         this.health = this.maxHealth
 
         this.range = 250
         this.shotCooldown = 10000
         this.lastShot = game.getTicks()
-
-        // this.balls = []
-        this.game = game
-    }
-
-    /** 
-     * @returns killed?
-     */
-    hit(damage: number) {
-        this.health -= damage
-        if (this.health <= 0) {
-            // this.game.balls = this.game.balls.filter(ball => !this.balls.includes(ball.id))
-            if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject.type === "dungeon") {
-                (<Room>this.game.dungeonManager.currentRoomObject).dungeonRounds.enemiesKilledThisRound += 1
-                this.game.dungeonManager.currentRoomObject.dungeonRounds.crates.push(Crate.coin(this.location.x, this.location.y, this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId, this.game))
-                this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId += 1
-            }
-            return true
-        }
-        return false
     }
 
     draw() {

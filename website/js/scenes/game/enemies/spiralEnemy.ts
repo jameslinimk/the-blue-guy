@@ -1,49 +1,24 @@
-import { Coordinates, distance, getAngle, project } from "../../../angles"
+import { distance, getAngle, project } from "../../../angles"
 import { GameScene } from "../../game"
 import { Bullet } from "../bullet"
-import { Crate } from "../crate"
-import { Room } from "../dungeonGenerator"
 import { Enemy } from "./enemy"
 
-class SpiralEnemy implements Enemy {
-    location: Coordinates
-    maxHealth: number
-    health: number
-    id: number
-    width: number
-    height: number
-    game: GameScene
+class SpiralEnemy extends Enemy {
     currentShootAngle: number
     lastShot: number
     shootDelay: number
     station: boolean
 
     constructor(x: number, y: number, id: number, game: GameScene) {
-        this.location = { x: x, y: y }
+        super(x, y, id, game)
         this.width = 30
         this.height = 30
-        this.id = id
         this.maxHealth = 200
         this.health = this.maxHealth
-        this.game = game
         this.currentShootAngle = 0
         this.lastShot = game.getTicks()
         this.shootDelay = 1000
         this.station = false
-    }
-
-    hit(damage: number) {
-        this.health -= damage
-        if (this.health <= 0) {
-            // this.game.balls = this.game.balls.filter(ball => !this.balls.includes(ball.id))
-            if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject.type === "dungeon") {
-                (<Room>this.game.dungeonManager.currentRoomObject).dungeonRounds.enemiesKilledThisRound += 1
-                this.game.dungeonManager.currentRoomObject.dungeonRounds.crates.push(Crate.coin(this.location.x, this.location.y, this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId, this.game))
-                this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId += 1
-            }
-            return true
-        }
-        return false
     }
 
     update(dt: number) {

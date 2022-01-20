@@ -1,5 +1,7 @@
+import { pointTouches, xywdToCollisionRectTopLeft } from "../collision"
 import { config } from "../config"
 import { CustomImage } from "../image"
+import { volume } from "../sound"
 import { clamp, GameScene } from "./game"
 import { Ammo, Gun } from "./game/guns"
 
@@ -70,20 +72,6 @@ function drawHud(game: GameScene) {
         drawInventoryGunSlot(i, gun, game.ctx, margin, game)
     }
 
-    /* ------------------------------ Custom cursor ----------------------------- */
-    game.ctx.shadowBlur = 4
-    game.ctx.strokeStyle = "#000000"
-    game.ctx.lineWidth = 3
-    game.ctx.beginPath()
-    game.ctx.arc(game.mouse.x, game.mouse.y, 5, 0, 2 * Math.PI)
-    game.ctx.stroke()
-
-    game.ctx.strokeStyle = "#FFFFFF"
-    game.ctx.lineWidth = 2
-    game.ctx.beginPath()
-    game.ctx.arc(game.mouse.x, game.mouse.y, 5, 0, 2 * Math.PI)
-    game.ctx.stroke()
-
     /* ------------------------------ Current round ----------------------------- */
     if (game.dungeonManager.currentRoomObject !== "0" && game.dungeonManager.currentRoomObject?.type === "dungeon" && game.dungeonManager.currentRoomObject.dungeonRounds.active) {
         game.ctx.shadowBlur = 10
@@ -111,34 +99,29 @@ function drawHud(game: GameScene) {
     game.ctx.shadowBlur = 0
 }
 
-function pauseMenuOn() {
-    // Enable volume slider
-    const volumeSlider = <HTMLInputElement>document.getElementById("volumeControl")
-    if (volumeSlider) {
-        volumeSlider.type = "range"
-    }
+function drawPauseMenu(game: GameScene) {
+    game.ctx.fillStyle = "#000000"
+    game.ctx.fillRect(config.width / 2 - 500 / 2, config.height / 2 - 500 / 2, 500, 500)
+    game.ctx.fillStyle = "#FFFFFF"
+    game.ctx.font = "20px serif"
+    game.ctx.fillText("Pause menu", config.width / 2 - game.ctx.measureText("Pause menu").width / 2, config.height / 2 - 500 / 2 + 30)
+    game.ctx.drawImage(game.volUp.image, config.width / 2 - 500 / 2 + 10 * 2 + game.ctx.measureText(`Volume: ${volume.volume * 100}/100`).width, config.height / 2 - 500 / 2 + 40)
+    game.ctx.drawImage(game.volDown.image, config.width / 2 - 500 / 2 + 10 * 3 + 32 + game.ctx.measureText(`Volume: ${volume.volume * 100}/100`).width, config.height / 2 - 500 / 2 + 40)
+    game.ctx.fillText(`Volume: ${volume.volume * 100}/100`, config.width / 2 - 500 / 2 + 10, config.height / 2 - 500 / 2 + 40 + 32 / 2 + 5)
 }
 
-function pauseMenuOff() {
-    // Disable volume slider
-    const volumeSlider = <HTMLInputElement>document.getElementById("volumeControl")
-    if (volumeSlider) {
-        volumeSlider.type = "hidden"
+function processClick(game: GameScene) {
+    if (pointTouches(xywdToCollisionRectTopLeft(config.width / 2 - 500 / 2 + 10 * 2 + game.ctx.measureText(`Volume: ${volume.volume * 100}/100`).width, config.height / 2 - 500 / 2 + 40, 32, 32), game.mouse)) {
+        volume.volume += 0.1
+    } else if (pointTouches(xywdToCollisionRectTopLeft(config.width / 2 - 500 / 2 + 10 * 3 + 32 + game.ctx.measureText(`Volume: ${volume.volume * 100}/100`).width, config.height / 2 - 500 / 2 + 40, 32, 32), game.mouse)) {
+        volume.volume -= 0.1
     }
-}
-
-function drawPauseMenu(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = "#000000"
-    ctx.fillRect(config.width / 2 - 500 / 2, config.height / 2 - 500 / 2, 500, 500)
-    ctx.fillStyle = "#FFFFFF"
-    ctx.fillText("Pause menu", config.width / 2 - ctx.measureText("Pause menu").width / 2, config.height / 2 - 500 / 2 + 30)
 }
 
 export {
     drawHud,
     drawPauseMenu,
-    pauseMenuOn,
-    pauseMenuOff,
+    processClick,
     margin,
     SystemMessage
 }

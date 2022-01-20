@@ -1,8 +1,6 @@
 import { Coordinates, distance, getAngle, project } from "../../../angles"
 import { config } from "../../../config"
 import { GameScene } from "../../game"
-import { Crate } from "../crate"
-import { Room } from "../dungeonGenerator"
 import { Player } from "../player"
 import { Enemy } from "./enemy"
 
@@ -214,28 +212,20 @@ class Ray {
     }
 }
 
-class RangedEnemy implements Enemy {
-    location: Coordinates
-    width: number
-    height: number
+class RangedEnemy extends Enemy {
     speed: number
-    id: number
-    health: number
-    maxHealth: number
 
     range: number
     shotCooldown: number
     lastShot: number
 
     rays: number[]
-    game: GameScene
 
     constructor(x: number, y: number, id: number, game: GameScene) {
-        this.location = { x: x, y: y }
+        super(x, y, id, game)
         this.width = 30
         this.height = 30
         this.speed = 0.05
-        this.id = id
         this.maxHealth = 100
         this.health = this.maxHealth
 
@@ -244,24 +234,6 @@ class RangedEnemy implements Enemy {
         this.lastShot = game.getTicks()
 
         this.rays = []
-        this.game = game
-    }
-
-    /** 
-     * @returns killed?
-     */
-    hit(damage: number) {
-        this.health -= damage
-        if (this.health <= 0) {
-            // this.game.rays = this.game.rays.filter(ray => !this.rays.includes(ray.id))
-            if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject.type === "dungeon") {
-                (<Room>this.game.dungeonManager.currentRoomObject).dungeonRounds.enemiesKilledThisRound += 1
-                this.game.dungeonManager.currentRoomObject.dungeonRounds.crates.push(Crate.coin(this.location.x, this.location.y, this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId, this.game))
-                this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId += 1
-            }
-            return true
-        }
-        return false
     }
 
     draw() {

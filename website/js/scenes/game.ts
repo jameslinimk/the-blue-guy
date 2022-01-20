@@ -10,7 +10,7 @@ import { Ray } from "./game/enemies/rangedEnemy"
 import { Map } from "./game/map"
 import { Player } from "./game/player"
 import { DungeonManager } from "./game/roundManager"
-import { drawHud, drawPauseMenu, margin, pauseMenuOff, pauseMenuOn, SystemMessage } from "./hud"
+import { drawHud, drawPauseMenu, margin, processClick, SystemMessage } from "./hud"
 import { shooting } from "./shooting"
 
 function random(min: number, max: number) {
@@ -60,6 +60,8 @@ class GameScene extends BaseScene {
     rangedEnemyImage: CustomImage
     shopGuyImage: CustomImage
     dummyImage: CustomImage
+    volUp: CustomImage
+    volDown: CustomImage
 
     /* -------------------------------- Inventory ------------------------------- */
     showInventory: boolean
@@ -118,6 +120,8 @@ class GameScene extends BaseScene {
         this.rangedEnemyImage = new CustomImage("./images/skins/rangedEnemy.png")
         this.shopGuyImage = new CustomImage('./images/skins/shopGuy.png')
         this.dummyImage = new CustomImage('./images/skins/dummy.png')
+        this.volUp = new CustomImage("./images/hud/volUp.png")
+        this.volDown = new CustomImage("./images/hud/volDown.png")
 
         this.showInventory = false
         this.showInventoryX = config.width - margin
@@ -152,12 +156,13 @@ class GameScene extends BaseScene {
         events.forEach(event => {
             switch (event.eventType) {
                 case "MouseDown":
-                    if (this.paused || shot) break
-
-                    event = <MouseDownEvent>event
-                    if (!shot && event.raw.button === 0 && this.getTicks() >= this.lastShot + this.player.gun.shootDelay) {
-                        shot = true
+                    if (!this.paused && !shot) {
+                        event = <MouseDownEvent>event
+                        shot = !shot && event.raw.button === 0 && this.getTicks() >= this.lastShot + this.player.gun.shootDelay
                     }
+
+                    /* --------------------------------- Volume --------------------------------- */
+                    processClick(this)
                     break
 
                 case "KeyDown":
@@ -190,7 +195,6 @@ class GameScene extends BaseScene {
                             this.map.mapNavigator = !this.map.mapNavigator
                             break
                         case "p":
-                            ((!this.paused) ? pauseMenuOn : pauseMenuOff)()
                             this.paused = !this.paused
                             break
                     }
@@ -224,7 +228,21 @@ class GameScene extends BaseScene {
         this.player.draw()
         drawHud(this)
         this.map.draw()
-        if (this.paused) drawPauseMenu(this.ctx)
+        if (this.paused) drawPauseMenu(this)
+
+        /* ------------------------------ Custom cursor ----------------------------- */
+        this.ctx.shadowBlur = 4
+        this.ctx.strokeStyle = "#000000"
+        this.ctx.lineWidth = 3
+        this.ctx.beginPath()
+        this.ctx.arc(this.mouse.x, this.mouse.y, 5, 0, 2 * Math.PI)
+        this.ctx.stroke()
+
+        this.ctx.strokeStyle = "#FFFFFF"
+        this.ctx.lineWidth = 2
+        this.ctx.beginPath()
+        this.ctx.arc(this.mouse.x, this.mouse.y, 5, 0, 2 * Math.PI)
+        this.ctx.stroke()
     }
 
     getTicks() {

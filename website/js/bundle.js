@@ -84,7 +84,10 @@ exports.CustomAnimation = CustomAnimation;
 },{}],3:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.xywdToCollisionRect = exports.touches = exports.overlaps = exports.contains = void 0;
+exports.xywdToCollisionRectTopLeft = exports.xywdToCollisionRect = exports.touches = exports.overlaps = exports.pointTouches = exports.contains = void 0;
+/**
+ * `x` and `y` have to be the **center** of the rectangle
+ */
 function xywdToCollisionRect(x, y, width, height) {
     return {
         x1: x - width / 2,
@@ -94,6 +97,15 @@ function xywdToCollisionRect(x, y, width, height) {
     };
 }
 exports.xywdToCollisionRect = xywdToCollisionRect;
+function xywdToCollisionRectTopLeft(x, y, width, height) {
+    return {
+        x1: x,
+        y1: y,
+        x2: x + width,
+        y2: y + height
+    };
+}
+exports.xywdToCollisionRectTopLeft = xywdToCollisionRectTopLeft;
 function contains(a, b) {
     return !(b.x1 < a.x1 ||
         b.y1 < a.y1 ||
@@ -101,6 +113,10 @@ function contains(a, b) {
         b.y2 > a.y2);
 }
 exports.contains = contains;
+function pointTouches(a, b) {
+    return (b.x > a.x1 && b.x < a.x2 && b.y > a.y1 && b.y < a.y2);
+}
+exports.pointTouches = pointTouches;
 function overlaps(a, b) {
     // no horizontal overlap
     if (a.x1 >= b.x2 || b.x1 >= a.x2)
@@ -135,6 +151,35 @@ const config = {
 exports.config = config;
 
 },{}],5:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Cookie = void 0;
+class Cookie {
+    static get(name) {
+        name = `${encodeURIComponent(name)}=`;
+        const startIndex = document.cookie.indexOf(name);
+        if (!(startIndex > -1))
+            return null;
+        let endIndex = document.cookie.indexOf(';', startIndex);
+        if (!(endIndex > -1))
+            endIndex = document.cookie.length;
+        return decodeURIComponent(document.cookie.substring(startIndex + name.length, endIndex));
+    }
+    static set(name, value, expires) {
+        if (typeof value !== "string")
+            value = value.toString();
+        let cookieText = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`;
+        if (expires)
+            cookieText += `; expires=${expires.toUTCString()}`;
+        document.cookie = cookieText;
+    }
+    static remove(name) {
+        this.set(name, "", new Date(0));
+    }
+}
+exports.Cookie = Cookie;
+
+},{}],6:[function(require,module,exports){
 "use strict";
 // Key keeper
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -323,7 +368,7 @@ class BaseScene {
 }
 exports.BaseScene = BaseScene;
 
-},{"./config":4}],6:[function(require,module,exports){
+},{"./config":4}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CustomImage = void 0;
@@ -338,7 +383,7 @@ class CustomImage {
 }
 exports.CustomImage = CustomImage;
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const config_1 = require("./config");
@@ -353,16 +398,6 @@ if (config_1.config.fullscreen) {
     const resizeWindow = () => {
         canvas.style.width = `${Math.min(window.innerWidth, window.innerHeight) - 20}px`;
         canvas.style.height = `${Math.min(window.innerWidth, window.innerHeight) - 20}px`;
-        const volumeSlider = document.getElementById("volumeControl");
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = rect.width / canvas.width;
-        const scaleY = rect.height / canvas.height;
-        const style = window.getComputedStyle(volumeSlider);
-        volumeSlider.style.transform = `scale(${scaleX}, ${scaleY})`;
-        volumeSlider.style.left = `${parseInt(style.getPropertyValue("left").split("px")[0]) * scaleX}`;
-        volumeSlider.style.top = `${parseInt(style.getPropertyValue("top").split("px")[0]) * scaleY}`;
-        console.log(scaleX, scaleY);
-        // TODO If this doesn't work just make a custom slider in the drawPauseMenu function
     };
     resizeWindow();
     window.onresize = resizeWindow;
@@ -370,7 +405,7 @@ if (config_1.config.fullscreen) {
 // if (detectMobile()) alert("A mobile device has been (possibly) detected. This game requires a keyboard to move. Touch to shoot is available, but not recommended.")
 (0, game_1.play)(new game_2.GameScene(), config_1.config.fps, canvas);
 
-},{"./config":4,"./game":5,"./scenes/game":8}],8:[function(require,module,exports){
+},{"./config":4,"./game":6,"./scenes/game":9}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.clamp = exports.random = exports.GameScene = void 0;
@@ -426,6 +461,8 @@ class GameScene extends game_1.BaseScene {
     rangedEnemyImage;
     shopGuyImage;
     dummyImage;
+    volUp;
+    volDown;
     /* -------------------------------- Inventory ------------------------------- */
     showInventory;
     showInventoryX;
@@ -475,6 +512,8 @@ class GameScene extends game_1.BaseScene {
         this.rangedEnemyImage = new image_1.CustomImage("./images/skins/rangedEnemy.png");
         this.shopGuyImage = new image_1.CustomImage('./images/skins/shopGuy.png');
         this.dummyImage = new image_1.CustomImage('./images/skins/dummy.png');
+        this.volUp = new image_1.CustomImage("./images/hud/volUp.png");
+        this.volDown = new image_1.CustomImage("./images/hud/volDown.png");
         this.showInventory = false;
         this.showInventoryX = config_1.config.width - hud_1.margin;
         this.showInventoryAnimation = new animations_1.CustomAnimation(250, 64, (movePerFrame) => {
@@ -504,12 +543,12 @@ class GameScene extends game_1.BaseScene {
         events.forEach(event => {
             switch (event.eventType) {
                 case "MouseDown":
-                    if (this.paused || shot)
-                        break;
-                    event = event;
-                    if (!shot && event.raw.button === 0 && this.getTicks() >= this.lastShot + this.player.gun.shootDelay) {
-                        shot = true;
+                    if (!this.paused && !shot) {
+                        event = event;
+                        shot = !shot && event.raw.button === 0 && this.getTicks() >= this.lastShot + this.player.gun.shootDelay;
                     }
+                    /* --------------------------------- Volume --------------------------------- */
+                    (0, hud_1.processClick)(this);
                     break;
                 case "KeyDown":
                     event = event;
@@ -542,7 +581,6 @@ class GameScene extends game_1.BaseScene {
                             this.map.mapNavigator = !this.map.mapNavigator;
                             break;
                         case "p":
-                            ((!this.paused) ? hud_1.pauseMenuOn : hud_1.pauseMenuOff)();
                             this.paused = !this.paused;
                             break;
                     }
@@ -573,7 +611,19 @@ class GameScene extends game_1.BaseScene {
         (0, hud_1.drawHud)(this);
         this.map.draw();
         if (this.paused)
-            (0, hud_1.drawPauseMenu)(this.ctx);
+            (0, hud_1.drawPauseMenu)(this);
+        /* ------------------------------ Custom cursor ----------------------------- */
+        this.ctx.shadowBlur = 4;
+        this.ctx.strokeStyle = "#000000";
+        this.ctx.lineWidth = 3;
+        this.ctx.beginPath();
+        this.ctx.arc(this.mouse.x, this.mouse.y, 5, 0, 2 * Math.PI);
+        this.ctx.stroke();
+        this.ctx.strokeStyle = "#FFFFFF";
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(this.mouse.x, this.mouse.y, 5, 0, 2 * Math.PI);
+        this.ctx.stroke();
     }
     getTicks() {
         return performance.now();
@@ -581,7 +631,7 @@ class GameScene extends game_1.BaseScene {
 }
 exports.GameScene = GameScene;
 
-},{"../animations":2,"../config":4,"../game":5,"../image":6,"../sound":22,"./game/map":16,"./game/player":17,"./game/roundManager":19,"./hud":20,"./shooting":21}],9:[function(require,module,exports){
+},{"../animations":2,"../config":4,"../game":6,"../image":7,"../sound":24,"./game/map":18,"./game/player":19,"./game/roundManager":21,"./hud":22,"./shooting":23}],10:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Bullet = void 0;
@@ -649,7 +699,7 @@ class Bullet {
 }
 exports.Bullet = Bullet;
 
-},{"../../angles":1,"../../collision":3,"../game":8}],10:[function(require,module,exports){
+},{"../../angles":1,"../../collision":3,"../game":9}],11:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Crate = exports.randomEnum = void 0;
@@ -722,7 +772,7 @@ class Crate {
 }
 exports.Crate = Crate;
 
-},{"../../collision":3,"../../config":4,"../game":8,"./guns":15}],11:[function(require,module,exports){
+},{"../../collision":3,"../../config":4,"../game":9,"./guns":17}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.spaceCharacter = exports.Direction = exports.printLayout = exports.fullGenerate = void 0;
@@ -1001,14 +1051,14 @@ function fullGenerate(game, options = { layoutSize: 7, rooms: 20 }, specialRooms
 }
 exports.fullGenerate = fullGenerate;
 
-},{"../../game":5,"../game":8,"./guns":15,"./rooms/shop":18,"./roundManager":19}],12:[function(require,module,exports){
+},{"../../game":6,"../game":9,"./guns":17,"./rooms/shop":20,"./roundManager":21}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BallEnemy = exports.Ball = void 0;
 const angles_1 = require("../../../angles");
 const config_1 = require("../../../config");
 const game_1 = require("../../game");
-const crate_1 = require("../crate");
+const enemy_1 = require("./enemy");
 const rangedEnemy_1 = require("./rangedEnemy");
 function circleRect(R, Xc, Yc, X1, Y1, X2, Y2) {
     // Find the nearest point on the
@@ -1086,48 +1136,21 @@ class Ball {
     }
 }
 exports.Ball = Ball;
-class BallEnemy {
-    location;
-    width;
-    height;
+class BallEnemy extends enemy_1.Enemy {
     speed;
-    id;
-    health;
-    maxHealth;
     range;
     shotCooldown;
     lastShot;
-    // balls: number[]
-    game;
     constructor(x, y, id, game) {
-        this.location = { x: x, y: y };
+        super(x, y, id, game);
         this.width = 30;
         this.height = 30;
         this.speed = 0.05;
-        this.id = id;
         this.maxHealth = 50;
         this.health = this.maxHealth;
         this.range = 250;
         this.shotCooldown = 10000;
         this.lastShot = game.getTicks();
-        // this.balls = []
-        this.game = game;
-    }
-    /**
-     * @returns killed?
-     */
-    hit(damage) {
-        this.health -= damage;
-        if (this.health <= 0) {
-            // this.game.balls = this.game.balls.filter(ball => !this.balls.includes(ball.id))
-            if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject.type === "dungeon") {
-                this.game.dungeonManager.currentRoomObject.dungeonRounds.enemiesKilledThisRound += 1;
-                this.game.dungeonManager.currentRoomObject.dungeonRounds.crates.push(crate_1.Crate.coin(this.location.x, this.location.y, this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId, this.game));
-                this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId += 1;
-            }
-            return true;
-        }
-        return false;
     }
     draw() {
         this.game.ctx.fillStyle = "#FFFF00";
@@ -1155,13 +1178,49 @@ class BallEnemy {
 }
 exports.BallEnemy = BallEnemy;
 
-},{"../../../angles":1,"../../../config":4,"../../game":8,"../crate":10,"./rangedEnemy":13}],13:[function(require,module,exports){
+},{"../../../angles":1,"../../../config":4,"../../game":9,"./enemy":14,"./rangedEnemy":15}],14:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Enemy = void 0;
+const crate_1 = require("../crate");
+class Enemy {
+    location;
+    maxHealth;
+    health;
+    id;
+    width;
+    height;
+    game;
+    constructor(x, y, id, game) {
+        this.location = { x: x, y: y };
+        this.id = id;
+        this.game = game;
+    }
+    update(dt) { }
+    draw() { }
+    hit(damage) {
+        this.health -= damage;
+        if (this.health <= 0) {
+            // this.game.balls = this.game.balls.filter(ball => !this.balls.includes(ball.id))
+            if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject.type === "dungeon") {
+                this.game.dungeonManager.currentRoomObject.dungeonRounds.enemiesKilledThisRound += 1;
+                this.game.dungeonManager.currentRoomObject.dungeonRounds.crates.push(crate_1.Crate.coin(this.location.x, this.location.y, this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId, this.game));
+                this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId += 1;
+            }
+            return true;
+        }
+        return false;
+    }
+}
+exports.Enemy = Enemy;
+
+},{"../crate":11}],15:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.findAngle = exports.lineRect = exports.lineLine = exports.Ray = exports.RangedEnemy = void 0;
 const angles_1 = require("../../../angles");
 const config_1 = require("../../../config");
-const crate_1 = require("../crate");
+const enemy_1 = require("./enemy");
 /**
  * @returns point of intersection
  */
@@ -1356,48 +1415,23 @@ class Ray {
     }
 }
 exports.Ray = Ray;
-class RangedEnemy {
-    location;
-    width;
-    height;
+class RangedEnemy extends enemy_1.Enemy {
     speed;
-    id;
-    health;
-    maxHealth;
     range;
     shotCooldown;
     lastShot;
     rays;
-    game;
     constructor(x, y, id, game) {
-        this.location = { x: x, y: y };
+        super(x, y, id, game);
         this.width = 30;
         this.height = 30;
         this.speed = 0.05;
-        this.id = id;
         this.maxHealth = 100;
         this.health = this.maxHealth;
         this.range = 500;
         this.shotCooldown = 5000;
         this.lastShot = game.getTicks();
         this.rays = [];
-        this.game = game;
-    }
-    /**
-     * @returns killed?
-     */
-    hit(damage) {
-        this.health -= damage;
-        if (this.health <= 0) {
-            // this.game.rays = this.game.rays.filter(ray => !this.rays.includes(ray.id))
-            if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject.type === "dungeon") {
-                this.game.dungeonManager.currentRoomObject.dungeonRounds.enemiesKilledThisRound += 1;
-                this.game.dungeonManager.currentRoomObject.dungeonRounds.crates.push(crate_1.Crate.coin(this.location.x, this.location.y, this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId, this.game));
-                this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId += 1;
-            }
-            return true;
-        }
-        return false;
     }
     draw() {
         this.game.ctx.shadowBlur = 4;
@@ -1456,50 +1490,28 @@ function leadPlayer(x, y, player) {
     return angle;
 }
 
-},{"../../../angles":1,"../../../config":4,"../crate":10}],14:[function(require,module,exports){
+},{"../../../angles":1,"../../../config":4,"./enemy":14}],16:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SpiralEnemy = void 0;
 const angles_1 = require("../../../angles");
 const bullet_1 = require("../bullet");
-const crate_1 = require("../crate");
-class SpiralEnemy {
-    location;
-    maxHealth;
-    health;
-    id;
-    width;
-    height;
-    game;
+const enemy_1 = require("./enemy");
+class SpiralEnemy extends enemy_1.Enemy {
     currentShootAngle;
     lastShot;
     shootDelay;
     station;
     constructor(x, y, id, game) {
-        this.location = { x: x, y: y };
+        super(x, y, id, game);
         this.width = 30;
         this.height = 30;
-        this.id = id;
         this.maxHealth = 200;
         this.health = this.maxHealth;
-        this.game = game;
         this.currentShootAngle = 0;
         this.lastShot = game.getTicks();
         this.shootDelay = 1000;
         this.station = false;
-    }
-    hit(damage) {
-        this.health -= damage;
-        if (this.health <= 0) {
-            // this.game.balls = this.game.balls.filter(ball => !this.balls.includes(ball.id))
-            if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject.type === "dungeon") {
-                this.game.dungeonManager.currentRoomObject.dungeonRounds.enemiesKilledThisRound += 1;
-                this.game.dungeonManager.currentRoomObject.dungeonRounds.crates.push(crate_1.Crate.coin(this.location.x, this.location.y, this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId, this.game));
-                this.game.dungeonManager.currentRoomObject.dungeonRounds.crateId += 1;
-            }
-            return true;
-        }
-        return false;
     }
     update(dt) {
         if (!this.station && (0, angles_1.distance)(this.location, this.game.player.location) > 200) {
@@ -1529,7 +1541,7 @@ class SpiralEnemy {
 }
 exports.SpiralEnemy = SpiralEnemy;
 
-},{"../../../angles":1,"../bullet":9,"../crate":10}],15:[function(require,module,exports){
+},{"../../../angles":1,"../bullet":10,"./enemy":14}],17:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.guns = exports.the360 = exports.shotgun = exports.sniper = exports.ak47 = exports.smg = exports.pistol = exports.Ammo = void 0;
@@ -1618,7 +1630,7 @@ exports.the360 = the360;
 const guns = [pistol, smg, ak47, sniper, shotgun, the360];
 exports.guns = guns;
 
-},{"../../image":6,"../../sound":22}],16:[function(require,module,exports){
+},{"../../image":7,"../../sound":24}],18:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Map = void 0;
@@ -1764,7 +1776,7 @@ class Map {
 }
 exports.Map = Map;
 
-},{"../../config":4,"./dungeonGenerator":11}],17:[function(require,module,exports){
+},{"../../config":4,"./dungeonGenerator":12}],19:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Player = void 0;
@@ -2015,7 +2027,7 @@ class Player {
 }
 exports.Player = Player;
 
-},{"../../angles":1,"../../animations":2,"../../config":4,"../../image":6,"../../sound":22,"./guns":15}],18:[function(require,module,exports){
+},{"../../angles":1,"../../animations":2,"../../config":4,"../../image":7,"../../sound":24,"./guns":17}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ShopRoom = void 0;
@@ -2082,7 +2094,7 @@ class ShopRoom {
 }
 exports.ShopRoom = ShopRoom;
 
-},{"../../../config":4,"../guns":15}],19:[function(require,module,exports){
+},{"../../../config":4,"../guns":17}],21:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DungeonManager = exports.RoundManager = void 0;
@@ -2254,11 +2266,13 @@ class RoundManager {
 }
 exports.RoundManager = RoundManager;
 
-},{"../../config":4,"../game":8,"./crate":10,"./dungeonGenerator":11,"./enemies/ballEnemy":12,"./enemies/rangedEnemy":13,"./enemies/spiralEnemy":14}],20:[function(require,module,exports){
+},{"../../config":4,"../game":9,"./crate":11,"./dungeonGenerator":12,"./enemies/ballEnemy":13,"./enemies/rangedEnemy":15,"./enemies/spiralEnemy":16}],22:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.margin = exports.pauseMenuOff = exports.pauseMenuOn = exports.drawPauseMenu = exports.drawHud = void 0;
+exports.margin = exports.processClick = exports.drawPauseMenu = exports.drawHud = void 0;
+const collision_1 = require("../collision");
 const config_1 = require("../config");
+const sound_1 = require("../sound");
 const game_1 = require("./game");
 const guns_1 = require("./game/guns");
 const margin = 16;
@@ -2315,18 +2329,6 @@ function drawHud(game) {
         const gun = game.player.gunInventory[i + 1];
         drawInventoryGunSlot(i, gun, game.ctx, margin, game);
     }
-    /* ------------------------------ Custom cursor ----------------------------- */
-    game.ctx.shadowBlur = 4;
-    game.ctx.strokeStyle = "#000000";
-    game.ctx.lineWidth = 3;
-    game.ctx.beginPath();
-    game.ctx.arc(game.mouse.x, game.mouse.y, 5, 0, 2 * Math.PI);
-    game.ctx.stroke();
-    game.ctx.strokeStyle = "#FFFFFF";
-    game.ctx.lineWidth = 2;
-    game.ctx.beginPath();
-    game.ctx.arc(game.mouse.x, game.mouse.y, 5, 0, 2 * Math.PI);
-    game.ctx.stroke();
     /* ------------------------------ Current round ----------------------------- */
     if (game.dungeonManager.currentRoomObject !== "0" && game.dungeonManager.currentRoomObject?.type === "dungeon" && game.dungeonManager.currentRoomObject.dungeonRounds.active) {
         game.ctx.shadowBlur = 10;
@@ -2353,31 +2355,28 @@ function drawHud(game) {
     game.ctx.shadowBlur = 0;
 }
 exports.drawHud = drawHud;
-function pauseMenuOn() {
-    // Enable volume slider
-    const volumeSlider = document.getElementById("volumeControl");
-    if (volumeSlider) {
-        volumeSlider.type = "range";
-    }
-}
-exports.pauseMenuOn = pauseMenuOn;
-function pauseMenuOff() {
-    // Disable volume slider
-    const volumeSlider = document.getElementById("volumeControl");
-    if (volumeSlider) {
-        volumeSlider.type = "hidden";
-    }
-}
-exports.pauseMenuOff = pauseMenuOff;
-function drawPauseMenu(ctx) {
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(config_1.config.width / 2 - 500 / 2, config_1.config.height / 2 - 500 / 2, 500, 500);
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillText("Pause menu", config_1.config.width / 2 - ctx.measureText("Pause menu").width / 2, config_1.config.height / 2 - 500 / 2 + 30);
+function drawPauseMenu(game) {
+    game.ctx.fillStyle = "#000000";
+    game.ctx.fillRect(config_1.config.width / 2 - 500 / 2, config_1.config.height / 2 - 500 / 2, 500, 500);
+    game.ctx.fillStyle = "#FFFFFF";
+    game.ctx.font = "20px serif";
+    game.ctx.fillText("Pause menu", config_1.config.width / 2 - game.ctx.measureText("Pause menu").width / 2, config_1.config.height / 2 - 500 / 2 + 30);
+    game.ctx.drawImage(game.volUp.image, config_1.config.width / 2 - 500 / 2 + 10 * 2 + game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40);
+    game.ctx.drawImage(game.volDown.image, config_1.config.width / 2 - 500 / 2 + 10 * 3 + 32 + game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40);
+    game.ctx.fillText(`Volume: ${sound_1.volume.volume * 100}/100`, config_1.config.width / 2 - 500 / 2 + 10, config_1.config.height / 2 - 500 / 2 + 40 + 32 / 2 + 5);
 }
 exports.drawPauseMenu = drawPauseMenu;
+function processClick(game) {
+    if ((0, collision_1.pointTouches)((0, collision_1.xywdToCollisionRectTopLeft)(config_1.config.width / 2 - 500 / 2 + 10 * 2 + game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40, 32, 32), game.mouse)) {
+        sound_1.volume.volume += 0.1;
+    }
+    else if ((0, collision_1.pointTouches)((0, collision_1.xywdToCollisionRectTopLeft)(config_1.config.width / 2 - 500 / 2 + 10 * 3 + 32 + game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40, 32, 32), game.mouse)) {
+        sound_1.volume.volume -= 0.1;
+    }
+}
+exports.processClick = processClick;
 
-},{"../config":4,"./game":8,"./game/guns":15}],21:[function(require,module,exports){
+},{"../collision":3,"../config":4,"../sound":24,"./game":9,"./game/guns":17}],23:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.shooting = void 0;
@@ -2401,28 +2400,26 @@ function shooting(game) {
 }
 exports.shooting = shooting;
 
-},{"../angles":1,"./game/bullet":9}],22:[function(require,module,exports){
+},{"../angles":1,"./game/bullet":10}],24:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.volume = exports.Sound = void 0;
+const cookies_1 = require("./cookies");
 const game_1 = require("./scenes/game");
 class SoundVolume {
     _volume;
     get volume() { return this._volume; }
     set volume(newVolume) {
-        newVolume = (0, game_1.clamp)(newVolume, 0, 1);
+        newVolume = Math.round((0, game_1.clamp)(newVolume, 0, 1) * 10) / 10;
+        cookies_1.Cookie.set("volume", newVolume);
         this._volume = newVolume;
     }
-    constructor(volume = 1) {
-        this._volume = volume;
+    constructor() {
+        this._volume = (!cookies_1.Cookie.get("volume")) ? 1 : parseFloat(cookies_1.Cookie.get("volume"));
     }
 }
 const volume = new SoundVolume();
 exports.volume = volume;
-const volumeSlider = document.getElementById("volumeControl");
-const changeVolume = () => volume.volume = parseInt(volumeSlider.value) / 100;
-volumeSlider.oninput = changeVolume;
-volumeSlider.onchange = changeVolume;
 class Sound {
     sound;
     constructor(source) {
@@ -2438,6 +2435,7 @@ class Sound {
         // Clone node to overlap sound
         this.sound.volume = volume.volume;
         const clonedAudio = this.sound.cloneNode();
+        clonedAudio.volume = this.sound.volume;
         clonedAudio.play();
     }
     play() {
@@ -2450,4 +2448,4 @@ class Sound {
 }
 exports.Sound = Sound;
 
-},{"./scenes/game":8}]},{},[7]);
+},{"./cookies":5,"./scenes/game":9}]},{},[8]);

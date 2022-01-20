@@ -10,17 +10,6 @@ if (config.fullscreen) {
     const resizeWindow = () => {
         canvas.style.width = `${Math.min(window.innerWidth, window.innerHeight) - 20}px`
         canvas.style.height = `${Math.min(window.innerWidth, window.innerHeight) - 20}px`
-
-        const volumeSlider = <HTMLInputElement>document.getElementById("volumeControl")
-        const rect = canvas.getBoundingClientRect()
-        const scaleX = rect.width / canvas.width
-        const scaleY = rect.height / canvas.height
-        const style = window.getComputedStyle(volumeSlider)
-        volumeSlider.style.transform = `scale(${scaleX}, ${scaleY})`
-        volumeSlider.style.left = `${parseInt(style.getPropertyValue("left").split("px")[0]) * scaleX}`
-        volumeSlider.style.top = `${parseInt(style.getPropertyValue("top").split("px")[0]) * scaleY}`
-        console.log(scaleX, scaleY)
-        // TODO If this doesn't work just make a custom slider in the drawPauseMenu function
     }
 
     resizeWindow()
