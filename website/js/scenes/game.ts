@@ -10,7 +10,7 @@ import { Ray } from "./game/enemies/rangedEnemy"
 import { Map } from "./game/map"
 import { Player } from "./game/player"
 import { DungeonManager } from "./game/roundManager"
-import { drawHud, drawPauseMenu, margin, processClick, SystemMessage } from "./hud"
+import { Hud, margin, SystemMessage } from "./hud"
 import { shooting } from "./shooting"
 
 function random(min: number, max: number) {
@@ -47,6 +47,7 @@ class GameScene extends BaseScene {
     /* -------------------------------- Managers -------------------------------- */
     dungeonManager: DungeonManager
     map: Map
+    hud: Hud
 
     /* --------------------------------- Images --------------------------------- */
     healthImage: CustomImage
@@ -108,6 +109,7 @@ class GameScene extends BaseScene {
 
         this.dungeonManager = new DungeonManager(this)
         this.map = new Map(this)
+        this.hud = new Hud(this)
 
         this.healthImage = new CustomImage("./images/health.png")
         this.crateImage = new CustomImage("./images/crate.png")
@@ -148,6 +150,7 @@ class GameScene extends BaseScene {
     processInput(events: Events, pressedKeys: PressedKeys, dt: number) {
         this.player.processInput(events, pressedKeys, dt)
         this.map.processInput(events)
+        this.hud.processInput(events)
 
         /* -------------------------------------------------------------------------- */
         /*                                   Events                                   */
@@ -160,9 +163,6 @@ class GameScene extends BaseScene {
                         event = <MouseDownEvent>event
                         shot = !shot && event.raw.button === 0 && this.getTicks() >= this.lastShot + this.player.gun.shootDelay
                     }
-
-                    /* --------------------------------- Volume --------------------------------- */
-                    processClick(this)
                     break
 
                 case "KeyDown":
@@ -226,23 +226,8 @@ class GameScene extends BaseScene {
 
         /* -------------------------------- Universal ------------------------------- */
         this.player.draw()
-        drawHud(this)
         this.map.draw()
-        if (this.paused) drawPauseMenu(this)
-
-        /* ------------------------------ Custom cursor ----------------------------- */
-        this.ctx.shadowBlur = 4
-        this.ctx.strokeStyle = "#000000"
-        this.ctx.lineWidth = 3
-        this.ctx.beginPath()
-        this.ctx.arc(this.mouse.x, this.mouse.y, 5, 0, 2 * Math.PI)
-        this.ctx.stroke()
-
-        this.ctx.strokeStyle = "#FFFFFF"
-        this.ctx.lineWidth = 2
-        this.ctx.beginPath()
-        this.ctx.arc(this.mouse.x, this.mouse.y, 5, 0, 2 * Math.PI)
-        this.ctx.stroke()
+        this.hud.draw()
     }
 
     getTicks() {

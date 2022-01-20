@@ -449,6 +449,7 @@ class GameScene extends game_1.BaseScene {
     /* -------------------------------- Managers -------------------------------- */
     dungeonManager;
     map;
+    hud;
     /* --------------------------------- Images --------------------------------- */
     healthImage;
     coinsImage;
@@ -501,6 +502,7 @@ class GameScene extends game_1.BaseScene {
         this.cratePickupSound = new sound_1.Sound("./sounds/pickupCoin.wav");
         this.dungeonManager = new roundManager_1.DungeonManager(this);
         this.map = new map_1.Map(this);
+        this.hud = new hud_1.Hud(this);
         this.healthImage = new image_1.CustomImage("./images/health.png");
         this.crateImage = new image_1.CustomImage("./images/crate.png");
         this.coinsImage = new image_1.CustomImage("./images/coin.png");
@@ -536,6 +538,7 @@ class GameScene extends game_1.BaseScene {
     processInput(events, pressedKeys, dt) {
         this.player.processInput(events, pressedKeys, dt);
         this.map.processInput(events);
+        this.hud.processInput(events);
         /* -------------------------------------------------------------------------- */
         /*                                   Events                                   */
         /* -------------------------------------------------------------------------- */
@@ -547,8 +550,6 @@ class GameScene extends game_1.BaseScene {
                         event = event;
                         shot = !shot && event.raw.button === 0 && this.getTicks() >= this.lastShot + this.player.gun.shootDelay;
                     }
-                    /* --------------------------------- Volume --------------------------------- */
-                    (0, hud_1.processClick)(this);
                     break;
                 case "KeyDown":
                     event = event;
@@ -608,22 +609,8 @@ class GameScene extends game_1.BaseScene {
         this.dungeonManager.draw();
         /* -------------------------------- Universal ------------------------------- */
         this.player.draw();
-        (0, hud_1.drawHud)(this);
         this.map.draw();
-        if (this.paused)
-            (0, hud_1.drawPauseMenu)(this);
-        /* ------------------------------ Custom cursor ----------------------------- */
-        this.ctx.shadowBlur = 4;
-        this.ctx.strokeStyle = "#000000";
-        this.ctx.lineWidth = 3;
-        this.ctx.beginPath();
-        this.ctx.arc(this.mouse.x, this.mouse.y, 5, 0, 2 * Math.PI);
-        this.ctx.stroke();
-        this.ctx.strokeStyle = "#FFFFFF";
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.arc(this.mouse.x, this.mouse.y, 5, 0, 2 * Math.PI);
-        this.ctx.stroke();
+        this.hud.draw();
     }
     getTicks() {
         return performance.now();
@@ -2269,7 +2256,7 @@ exports.RoundManager = RoundManager;
 },{"../../config":4,"../game":9,"./crate":11,"./dungeonGenerator":12,"./enemies/ballEnemy":13,"./enemies/rangedEnemy":15,"./enemies/spiralEnemy":16}],22:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.margin = exports.processClick = exports.drawPauseMenu = exports.drawHud = void 0;
+exports.margin = exports.Hud = void 0;
 const collision_1 = require("../collision");
 const config_1 = require("../config");
 const sound_1 = require("../sound");
@@ -2277,104 +2264,124 @@ const game_1 = require("./game");
 const guns_1 = require("./game/guns");
 const margin = 16;
 exports.margin = margin;
-function drawAmmoCounter(number, ammoType, image, ctx, game) {
-    ctx.drawImage(image.image, margin * number + 32 * (number - 1), config_1.config.height - (32 + margin));
-    ctx.font = "20px serif";
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(game.player.ammo[ammoType].toString(), 32 * (number - 1) + (margin * number + 16) - (ctx.measureText(game.player.ammo[ammoType].toString()).width) / 2, config_1.config.height - (32 + margin * 1.5));
-    if (game.player.gun.ammo === ammoType) {
-        // Cooldown screen
-        const cooldownPercent = ((((0, game_1.clamp)(game.getTicks() - game.lastShot, 0, game.player.gun.shootDelay)) - game.player.gun.shootDelay) * -1) / game.player.gun.shootDelay;
-        const length = 32 * cooldownPercent;
-        ctx.fillRect(32 * (number - 1) + (margin * number + 16) - length / 2, config_1.config.height - (margin), length, margin / 4);
+class Hud {
+    game;
+    constructor(game) {
+        this.game = game;
     }
-}
-function drawInventoryGunSlot(number, gun, ctx, margin, game) {
-    const x = game.showInventoryX;
-    const y = margin * 3 + 16 + (64 * number) + (margin / 2 * number);
-    ctx.drawImage(game.frameImage.image, x, y);
-    if (gun)
-        ctx.drawImage(gun.image.image, x, y);
-    ctx.font = "20px serif";
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillText((number + 1).toString(), x - ctx.measureText((number + 1).toString()).width + 64 - margin / 2, y + 22);
-}
-function drawHud(game) {
-    /* --------------------------------- Ammo ---------------------------------- */
-    game.ctx.shadowBlur = 10;
-    game.ctx.shadowColor = "#000000";
-    drawAmmoCounter(1, guns_1.Ammo.small, game.smallAmmoImage, game.ctx, game);
-    drawAmmoCounter(2, guns_1.Ammo.medium, game.mediumAmmoImage, game.ctx, game);
-    drawAmmoCounter(3, guns_1.Ammo.large, game.largeAmmoImage, game.ctx, game);
-    drawAmmoCounter(4, guns_1.Ammo.shell, game.shellsAmmoImage, game.ctx, game);
-    /* ---------------------------------- Lives --------------------------------- */
-    game.ctx.shadowColor = "#FD0100";
-    game.ctx.drawImage(game.healthImage.image, margin, margin);
-    game.ctx.font = "20px serif";
-    game.ctx.fillStyle = "#FFFFFF";
-    game.ctx.shadowColor = "#000000";
-    game.ctx.fillText(game.player.lives.toString(), margin * 2 + 32, margin + 16);
-    /* ---------------------------------- Coins --------------------------------- */
-    game.ctx.shadowColor = "#FFDF00";
-    game.ctx.drawImage(game.coinsImage.image, margin, margin * 2 + 32);
-    game.ctx.font = "20px serif";
-    game.ctx.fillStyle = "#FFFFFF";
-    game.ctx.shadowColor = "#000000";
-    game.ctx.fillText(game.player.coins.toString(), margin * 2 + 32, margin * 2 + 32 + 16);
-    /* ------------------------------ Gun selector ------------------------------ */
-    game.ctx.shadowBlur = 2;
-    game.ctx.drawImage(game.frameImage.image, margin, config_1.config.height - (32 * 4 + margin));
-    game.ctx.drawImage(game.player.gun.image.image, margin, config_1.config.height - (32 * 4 + margin));
-    for (let i = 0; i < 9; i++) {
-        const gun = game.player.gunInventory[i + 1];
-        drawInventoryGunSlot(i, gun, game.ctx, margin, game);
+    processInput(events) {
+        events.filter(event => event.eventType === "MouseDown" && event.raw.button === 0).forEach(event => {
+            if ((0, collision_1.pointTouches)((0, collision_1.xywdToCollisionRectTopLeft)(config_1.config.width / 2 - 500 / 2 + 10 * 2 + this.game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40, 32, 32), this.game.mouse)) {
+                sound_1.volume.volume += 0.1;
+            }
+            else if ((0, collision_1.pointTouches)((0, collision_1.xywdToCollisionRectTopLeft)(config_1.config.width / 2 - 500 / 2 + 10 * 3 + 32 + this.game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40, 32, 32), this.game.mouse)) {
+                sound_1.volume.volume -= 0.1;
+            }
+        });
     }
-    /* ------------------------------ Current round ----------------------------- */
-    if (game.dungeonManager.currentRoomObject !== "0" && game.dungeonManager.currentRoomObject?.type === "dungeon" && game.dungeonManager.currentRoomObject.dungeonRounds.active) {
-        game.ctx.shadowBlur = 10;
-        game.ctx.font = "20px serif";
-        game.ctx.fillStyle = "#FFFFFF";
-        game.ctx.fillText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`, config_1.config.width - game.ctx.measureText(`Round: ${game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`).width - margin, margin + 16);
+    drawPauseMenu() {
+        this.game.ctx.fillStyle = "#000000";
+        this.game.ctx.fillRect(config_1.config.width / 2 - 500 / 2, config_1.config.height / 2 - 500 / 2, 500, 500);
+        this.game.ctx.fillStyle = "#FFFFFF";
+        this.game.ctx.font = "20px serif";
+        this.game.ctx.fillText("Pause menu", config_1.config.width / 2 - this.game.ctx.measureText("Pause menu").width / 2, config_1.config.height / 2 - 500 / 2 + 30);
+        this.game.ctx.drawImage(this.game.volUp.image, config_1.config.width / 2 - 500 / 2 + 10 * 2 + this.game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40);
+        this.game.ctx.drawImage(this.game.volDown.image, config_1.config.width / 2 - 500 / 2 + 10 * 3 + 32 + this.game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40);
+        this.game.ctx.fillText(`Volume: ${sound_1.volume.volume * 100}/100`, config_1.config.width / 2 - 500 / 2 + 10, config_1.config.height / 2 - 500 / 2 + 40 + 32 / 2 + 5);
     }
-    /* ----------------------------- System messages ---------------------------- */
-    game.ctx.font = "20px verdana";
-    game.ctx.fillStyle = "#FF0000";
-    game.ctx.shadowBlur = 10;
-    game.ctx.shadowColor = "#000000";
-    const removedMessages = [];
-    for (let i = 0; i < game.systemMessages.length; i++) {
-        const systemMessage = game.systemMessages[i];
-        if (game.getTicks() >= systemMessage.sentAt + 2000) {
-            removedMessages.push(systemMessage.id);
-            continue;
+    drawInventoryGunSlot(number, gun) {
+        const x = this.game.showInventoryX;
+        const y = margin * 3 + 16 + (64 * number) + (margin / 2 * number);
+        this.game.ctx.drawImage(this.game.frameImage.image, x, y);
+        if (gun)
+            this.game.ctx.drawImage(gun.image.image, x, y);
+        this.game.ctx.font = "20px serif";
+        this.game.ctx.fillStyle = "#FFFFFF";
+        this.game.ctx.fillText((number + 1).toString(), x - this.game.ctx.measureText((number + 1).toString()).width + 64 - margin / 2, y + 22);
+    }
+    drawAmmoCounter(number, ammoType, image) {
+        this.game.ctx.drawImage(image.image, margin * number + 32 * (number - 1), config_1.config.height - (32 + margin));
+        this.game.ctx.font = "20px serif";
+        this.game.ctx.fillStyle = "#FFFFFF";
+        this.game.ctx.fillText(this.game.player.ammo[ammoType].toString(), 32 * (number - 1) + (margin * number + 16) - (this.game.ctx.measureText(this.game.player.ammo[ammoType].toString()).width) / 2, config_1.config.height - (32 + margin * 1.5));
+        if (this.game.player.gun.ammo === ammoType) {
+            // Cooldown screen
+            const cooldownPercent = ((((0, game_1.clamp)(this.game.getTicks() - this.game.lastShot, 0, this.game.player.gun.shootDelay)) - this.game.player.gun.shootDelay) * -1) / this.game.player.gun.shootDelay;
+            const length = 32 * cooldownPercent;
+            this.game.ctx.fillRect(32 * (number - 1) + (margin * number + 16) - length / 2, config_1.config.height - (margin), length, margin / 4);
         }
-        game.ctx.fillText(systemMessage.message, config_1.config.width / 2 - game.ctx.measureText(systemMessage.message).width / 2, margin * 2 + 20 * i);
     }
-    if (removedMessages.length > 0)
-        game.systemMessages = game.systemMessages.filter(msg => !removedMessages.includes(msg.id));
-    game.ctx.shadowBlur = 0;
-}
-exports.drawHud = drawHud;
-function drawPauseMenu(game) {
-    game.ctx.fillStyle = "#000000";
-    game.ctx.fillRect(config_1.config.width / 2 - 500 / 2, config_1.config.height / 2 - 500 / 2, 500, 500);
-    game.ctx.fillStyle = "#FFFFFF";
-    game.ctx.font = "20px serif";
-    game.ctx.fillText("Pause menu", config_1.config.width / 2 - game.ctx.measureText("Pause menu").width / 2, config_1.config.height / 2 - 500 / 2 + 30);
-    game.ctx.drawImage(game.volUp.image, config_1.config.width / 2 - 500 / 2 + 10 * 2 + game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40);
-    game.ctx.drawImage(game.volDown.image, config_1.config.width / 2 - 500 / 2 + 10 * 3 + 32 + game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40);
-    game.ctx.fillText(`Volume: ${sound_1.volume.volume * 100}/100`, config_1.config.width / 2 - 500 / 2 + 10, config_1.config.height / 2 - 500 / 2 + 40 + 32 / 2 + 5);
-}
-exports.drawPauseMenu = drawPauseMenu;
-function processClick(game) {
-    if ((0, collision_1.pointTouches)((0, collision_1.xywdToCollisionRectTopLeft)(config_1.config.width / 2 - 500 / 2 + 10 * 2 + game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40, 32, 32), game.mouse)) {
-        sound_1.volume.volume += 0.1;
+    draw() {
+        /* --------------------------------- Ammo ---------------------------------- */
+        this.game.ctx.shadowBlur = 10;
+        this.game.ctx.shadowColor = "#000000";
+        this.drawAmmoCounter(1, guns_1.Ammo.small, this.game.smallAmmoImage);
+        this.drawAmmoCounter(2, guns_1.Ammo.medium, this.game.mediumAmmoImage);
+        this.drawAmmoCounter(3, guns_1.Ammo.large, this.game.largeAmmoImage);
+        this.drawAmmoCounter(4, guns_1.Ammo.shell, this.game.shellsAmmoImage);
+        /* ---------------------------------- Lives --------------------------------- */
+        this.game.ctx.shadowColor = "#FD0100";
+        this.game.ctx.drawImage(this.game.healthImage.image, margin, margin);
+        this.game.ctx.font = "20px serif";
+        this.game.ctx.fillStyle = "#FFFFFF";
+        this.game.ctx.shadowColor = "#000000";
+        this.game.ctx.fillText(this.game.player.lives.toString(), margin * 2 + 32, margin + 16);
+        /* ---------------------------------- Coins --------------------------------- */
+        this.game.ctx.shadowColor = "#FFDF00";
+        this.game.ctx.drawImage(this.game.coinsImage.image, margin, margin * 2 + 32);
+        this.game.ctx.font = "20px serif";
+        this.game.ctx.fillStyle = "#FFFFFF";
+        this.game.ctx.shadowColor = "#000000";
+        this.game.ctx.fillText(this.game.player.coins.toString(), margin * 2 + 32, margin * 2 + 32 + 16);
+        /* ------------------------------ Gun selector ------------------------------ */
+        this.game.ctx.shadowBlur = 2;
+        this.game.ctx.drawImage(this.game.frameImage.image, margin, config_1.config.height - (32 * 4 + margin));
+        this.game.ctx.drawImage(this.game.player.gun.image.image, margin, config_1.config.height - (32 * 4 + margin));
+        for (let i = 0; i < 9; i++) {
+            const gun = this.game.player.gunInventory[i + 1];
+            this.drawInventoryGunSlot(i, gun);
+        }
+        /* ------------------------------ Current round ----------------------------- */
+        if (this.game.dungeonManager.currentRoomObject !== "0" && this.game.dungeonManager.currentRoomObject?.type === "dungeon" && this.game.dungeonManager.currentRoomObject.dungeonRounds.active) {
+            this.game.ctx.shadowBlur = 10;
+            this.game.ctx.font = "20px serif";
+            this.game.ctx.fillStyle = "#FFFFFF";
+            this.game.ctx.fillText(`Round: ${this.game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${this.game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`, config_1.config.width - this.game.ctx.measureText(`Round: ${this.game.dungeonManager.currentRoomObject.dungeonRounds.round + 1} / ${this.game.dungeonManager.currentRoomObject.dungeonRounds.rounds.length}`).width - margin, margin + 16);
+        }
+        /* ----------------------------- System messages ---------------------------- */
+        this.game.ctx.font = "20px verdana";
+        this.game.ctx.fillStyle = "#FF0000";
+        this.game.ctx.shadowBlur = 10;
+        this.game.ctx.shadowColor = "#000000";
+        const removedMessages = [];
+        for (let i = 0; i < this.game.systemMessages.length; i++) {
+            const systemMessage = this.game.systemMessages[i];
+            if (this.game.getTicks() >= systemMessage.sentAt + 2000) {
+                removedMessages.push(systemMessage.id);
+                continue;
+            }
+            this.game.ctx.fillText(systemMessage.message, config_1.config.width / 2 - this.game.ctx.measureText(systemMessage.message).width / 2, margin * 2 + 20 * i);
+        }
+        if (removedMessages.length > 0)
+            this.game.systemMessages = this.game.systemMessages.filter(msg => !removedMessages.includes(msg.id));
+        this.game.ctx.shadowBlur = 0;
+        if (this.game.paused)
+            this.drawPauseMenu();
+        /* ------------------------------ Custom cursor ----------------------------- */
+        this.game.ctx.shadowBlur = 4;
+        this.game.ctx.strokeStyle = "#000000";
+        this.game.ctx.lineWidth = 3;
+        this.game.ctx.beginPath();
+        this.game.ctx.arc(this.game.mouse.x, this.game.mouse.y, 5, 0, 2 * Math.PI);
+        this.game.ctx.stroke();
+        this.game.ctx.strokeStyle = "#FFFFFF";
+        this.game.ctx.lineWidth = 2;
+        this.game.ctx.beginPath();
+        this.game.ctx.arc(this.game.mouse.x, this.game.mouse.y, 5, 0, 2 * Math.PI);
+        this.game.ctx.stroke();
     }
-    else if ((0, collision_1.pointTouches)((0, collision_1.xywdToCollisionRectTopLeft)(config_1.config.width / 2 - 500 / 2 + 10 * 3 + 32 + game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40, 32, 32), game.mouse)) {
-        sound_1.volume.volume -= 0.1;
-    }
 }
-exports.processClick = processClick;
+exports.Hud = Hud;
 
 },{"../collision":3,"../config":4,"../sound":24,"./game":9,"./game/guns":17}],23:[function(require,module,exports){
 "use strict";
