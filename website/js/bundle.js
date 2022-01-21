@@ -171,11 +171,44 @@ class Cookie {
     static remove(name) {
         window.localStorage.removeItem(name);
     }
+    static dungeonRoundsToSave(roundManager) {
+        if (!roundManager)
+            return null;
+        return {
+            rounds: roundManager.rounds
+        };
+    }
+    static shopRoomToSave(shopRoom) {
+        if (!shopRoom)
+            return null;
+        return {
+            items: shopRoom.items
+        };
+    }
+    static roomToSave(room) {
+        return (room === "0") ? room : {
+            type: room.type,
+            dungeonRounds: this.dungeonRoundsToSave(room.dungeonRounds),
+            shopRoom: this.shopRoomToSave(room.shopRoom),
+            direction: room.direction,
+            discovered: room.discovered
+        };
+    }
+    static clone(items) {
+        return items.map(item => Array.isArray(item) ? this.clone(item) : item);
+    }
     static save(game) {
         if (game.dungeonManager.currentRoomObject === null)
             return;
+        // Deep copy
+        const layout = this.clone(game.dungeonManager.layout);
+        for (let y = 0; y < layout.length; y++) {
+            for (let x = 0; x < layout[y].length; x++) {
+                layout[y][x] = this.roomToSave(layout[y][x]);
+            }
+        }
         Cookie.set("save", JSON.stringify({
-            layout: game.dungeonManager.layout,
+            layout: layout,
             location: game.dungeonManager.currentRoom,
             playerData: {
                 coins: game.player.coins,
@@ -183,6 +216,27 @@ class Cookie {
                 guns: game.player.gunInventory
             },
             saveTime: Date.now()
+        }));
+    }
+    static load(game) {
+        if (!this.get("save"))
+            return null;
+        const _save = JSON.parse(this.get("save"));
+        // CHECKING SAVE
+        if (Object.keys(_save).sort().join(",") !== ["layout", "location", "playerData", "saveTime"].sort().join(","))
+            Cookie.remove("save");
+        if (Object.keys(_save.playerData).sort().join(",") !== ["coins", "ammo", "guns"].sort().join(","))
+            Cookie.remove("save");
+        const save = _save;
+        // Confirming
+        const confirm = prompt("A local save was found! Load by typing \"y\", else type anything");
+        if (confirm.toLocaleLowerCase() !== "y")
+            return;
+        // Confirmed
+        game.dungeonManager.layout = save.layout.map(row => row.map(room => {
+            if (room === "0")
+                return room;
+            // TODO Work from here. (Check if shop or dungeon then convert and add default values)
         }));
     }
 }
@@ -423,6 +477,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.clamp = exports.random = exports.GameScene = void 0;
 const animations_1 = require("../animations");
 const config_1 = require("../config");
+const cookies_1 = require("../cookies");
 const game_1 = require("../game");
 const image_1 = require("../image");
 const sound_1 = require("../sound");
@@ -596,6 +651,12 @@ class GameScene extends game_1.BaseScene {
                         case "p":
                             this.paused = !this.paused;
                             break;
+                        case "k":
+                            cookies_1.Cookie.save(this);
+                            break;
+                        case "l":
+                            cookies_1.Cookie.load(this);
+                            break;
                     }
                     break;
             }
@@ -630,7 +691,7 @@ class GameScene extends game_1.BaseScene {
 }
 exports.GameScene = GameScene;
 
-},{"../animations":2,"../config":4,"../game":6,"../image":7,"../sound":24,"./game/map":18,"./game/player":19,"./game/roundManager":21,"./hud":22,"./shooting":23}],10:[function(require,module,exports){
+},{"../animations":2,"../config":4,"../cookies":5,"../game":6,"../image":7,"../sound":24,"./game/map":18,"./game/player":19,"./game/roundManager":21,"./hud":22,"./shooting":23}],10:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Bullet = void 0;

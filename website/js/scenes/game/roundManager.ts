@@ -196,6 +196,7 @@ class RoundManager {
 
 export {
     RoundManager,
+    Round,
     DungeonManager
 }
 

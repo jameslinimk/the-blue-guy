@@ -76,6 +76,7 @@ class ShopRoom {
 }
 
 export {
-    ShopRoom
+    ShopRoom,
+    ShopItem
 }
 

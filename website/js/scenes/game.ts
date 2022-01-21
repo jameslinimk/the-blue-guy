@@ -1,5 +1,6 @@
 import { CustomAnimation } from "../animations"
 import { config } from "../config"
+import { Cookie } from "../cookies"
 import { BaseScene, Events, KeyDownEvent, MouseDownEvent, PressedKeys } from "../game"
 import { CustomImage } from "../image"
 import { Sound } from "../sound"
@@ -196,6 +197,12 @@ class GameScene extends BaseScene {
                             break
                         case "p":
                             this.paused = !this.paused
+                            break
+                        case "k":
+                            Cookie.save(this)
+                            break
+                        case "l":
+                            Cookie.load(this)
                             break
                     }
                     break
