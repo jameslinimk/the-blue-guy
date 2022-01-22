@@ -154,6 +154,9 @@ exports.config = config;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Cookie = void 0;
+const guns_1 = require("./scenes/game/guns");
+const shop_1 = require("./scenes/game/rooms/shop");
+const roundManager_1 = require("./scenes/game/roundManager");
 class Cookie {
     /**
      * Checks wether or not the browser supports localStorage
@@ -213,36 +216,70 @@ class Cookie {
             playerData: {
                 coins: game.player.coins,
                 ammo: game.player.ammo,
-                guns: game.player.gunInventory
+                guns: game.player.gunInventory,
+                lives: game.player.lives
             },
             saveTime: Date.now()
         }));
+        // Send system message
+        game.systemMessages.push({
+            sentAt: performance.now(),
+            message: "Game saved!",
+            id: game.systemMessagesId
+        });
+        game.systemMessagesId += 1;
+    }
+    static saveToRoom(game, save) {
+        if (!save)
+            return save;
+        const returnRoundManager = new roundManager_1.RoundManager(game);
+        returnRoundManager.rounds = save.rounds;
+        return returnRoundManager;
+    }
+    static saveToShop(game, shop) {
+        if (!shop)
+            return shop;
+        return new shop_1.ShopRoom(shop.items, game);
     }
     static load(game) {
         if (!this.get("save"))
-            return null;
+            return;
         const _save = JSON.parse(this.get("save"));
         // CHECKING SAVE
         if (Object.keys(_save).sort().join(",") !== ["layout", "location", "playerData", "saveTime"].sort().join(","))
-            Cookie.remove("save");
-        if (Object.keys(_save.playerData).sort().join(",") !== ["coins", "ammo", "guns"].sort().join(","))
-            Cookie.remove("save");
+            return Cookie.remove("save");
+        if (Object.keys(_save.playerData).sort().join(",") !== ["coins", "ammo", "guns", "lives"].sort().join(","))
+            return Cookie.remove("save");
         const save = _save;
         // Confirming
-        const confirm = prompt("A local save was found! Load by typing \"y\", else type anything");
-        if (confirm.toLocaleLowerCase() !== "y")
+        const confirm = prompt(`A local save was found! Load by typing "y", else type anything. Save file time: ${new Date(save.saveTime).toLocaleString()}`);
+        if (!confirm || confirm.toLocaleLowerCase() !== "y")
             return;
-        // Confirmed
+        /* -------------------------------- Confirmed ------------------------------- */
+        // Layout
         game.dungeonManager.layout = save.layout.map(row => row.map(room => {
             if (room === "0")
                 return room;
-            // TODO Work from here. (Check if shop or dungeon then convert and add default values)
+            return { ...room, dungeonRounds: this.saveToRoom(game, room.dungeonRounds), shopRoom: this.saveToShop(game, room.shopRoom) };
         }));
+        // Player
+        game.player.coins = save.playerData.coins;
+        game.player.ammo = save.playerData.ammo;
+        game.player.gunInventory = save.playerData.guns;
+        Object.keys(game.player.gunInventory).forEach(key => {
+            game.player.gunInventory[key] = (guns_1.gunKeys[key]) ? guns_1.gunKeys[key] : null;
+        });
+        game.player.lives = save.playerData.lives;
+        // Reset game
+        game.bullets = [];
+        game.balls = [];
+        game.rays = [];
+        game.enemies = [];
     }
 }
 exports.Cookie = Cookie;
 
-},{}],6:[function(require,module,exports){
+},{"./scenes/game/guns":17,"./scenes/game/rooms/shop":20,"./scenes/game/roundManager":21}],6:[function(require,module,exports){
 "use strict";
 // Key keeper
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1604,7 +1641,7 @@ exports.SpiralEnemy = SpiralEnemy;
 },{"../../../angles":1,"../bullet":10,"./enemy":14}],17:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.guns = exports.the360 = exports.shotgun = exports.sniper = exports.ak47 = exports.smg = exports.pistol = exports.Ammo = void 0;
+exports.gunKeys = exports.guns = exports.the360 = exports.shotgun = exports.sniper = exports.ak47 = exports.smg = exports.pistol = exports.Ammo = void 0;
 const image_1 = require("../../image");
 const sound_1 = require("../../sound");
 var Ammo;
@@ -1616,6 +1653,7 @@ var Ammo;
 })(Ammo || (Ammo = {}));
 exports.Ammo = Ammo;
 const pistol = {
+    id: "pistol",
     damage: 25,
     inaccuracy: 5,
     range: 500,
@@ -1628,6 +1666,7 @@ const pistol = {
 };
 exports.pistol = pistol;
 const smg = {
+    id: "smg",
     damage: 2,
     inaccuracy: 5,
     range: 400,
@@ -1640,6 +1679,7 @@ const smg = {
 };
 exports.smg = smg;
 const ak47 = {
+    id: "ak47",
     damage: 25,
     inaccuracy: 7,
     range: 600,
@@ -1652,6 +1692,7 @@ const ak47 = {
 };
 exports.ak47 = ak47;
 const sniper = {
+    id: "sniper",
     damage: 150,
     inaccuracy: 1,
     range: 750,
@@ -1664,6 +1705,7 @@ const sniper = {
 };
 exports.sniper = sniper;
 const shotgun = {
+    id: "shotgun",
     damage: 15,
     inaccuracy: 25,
     range: 200,
@@ -1676,6 +1718,7 @@ const shotgun = {
 };
 exports.shotgun = shotgun;
 const the360 = {
+    id: "the360",
     damage: 5,
     inaccuracy: 360,
     range: 100,
@@ -1689,12 +1732,22 @@ const the360 = {
 exports.the360 = the360;
 const guns = [pistol, smg, ak47, sniper, shotgun, the360];
 exports.guns = guns;
+const gunKeys = {
+    pistol: pistol,
+    smg: smg,
+    ak47: ak47,
+    sniper: sniper,
+    shotgun: shotgun,
+    the360: the360
+};
+exports.gunKeys = gunKeys;
 
 },{"../../image":7,"../../sound":24}],18:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Map = void 0;
 const config_1 = require("../../config");
+const cookies_1 = require("../../cookies");
 const dungeonGenerator_1 = require("./dungeonGenerator");
 class Map {
     game;
@@ -1821,8 +1874,10 @@ class Map {
         if (room?.discovered === false)
             this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd][this.game.dungeonManager.currentRoom.x + hspd].discovered = true;
         if (room?.type === "dungeon" && room?.dungeonRounds?.cleared === false) {
+            cookies_1.Cookie.save(this.game);
             setTimeout(() => {
                 this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y][this.game.dungeonManager.currentRoom.x].dungeonRounds.active = true;
+                this.game.player.location = this.game.player.spawnLocation;
                 this.mapNavigator = false;
             }, 1000);
         }
@@ -1836,7 +1891,7 @@ class Map {
 }
 exports.Map = Map;
 
-},{"../../config":4,"./dungeonGenerator":12}],19:[function(require,module,exports){
+},{"../../config":4,"../../cookies":5,"./dungeonGenerator":12}],19:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Player = void 0;
@@ -1858,6 +1913,7 @@ const dashAngles = {
 };
 class Player {
     location;
+    spawnLocation;
     width;
     height;
     speed;
@@ -1885,6 +1941,7 @@ class Player {
     game;
     constructor(x, y, game) {
         this.location = { x: x, y: y };
+        this.spawnLocation = { x: x, y: y };
         this.width = 25;
         this.height = 25;
         this.speed = 0.25;
@@ -2174,7 +2231,7 @@ class DungeonManager {
     }
     currentRoom;
     get currentRoomObject() {
-        if (this._layout === undefined || this.currentRoom === undefined)
+        if (!this._layout || !this.currentRoom)
             return null;
         return this._layout[this.currentRoom.y][this.currentRoom.x];
     }
@@ -2495,7 +2552,7 @@ class SoundVolume {
         this._volume = newVolume;
     }
     constructor() {
-        this._volume = (!cookies_1.Cookie.get("volume")) ? 1 : parseFloat(cookies_1.Cookie.get("volume"));
+        this._volume = (!cookies_1.Cookie?.get("volume")) ? 1 : parseFloat(cookies_1.Cookie.get("volume"));
     }
 }
 const volume = new SoundVolume();

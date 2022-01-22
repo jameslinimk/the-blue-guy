@@ -17,7 +17,7 @@ class DungeonManager {
     }
     currentRoom?: Coordinates
     get currentRoomObject() {
-        if (this._layout === undefined || this.currentRoom === undefined) return null
+        if (!this._layout || !this.currentRoom) return null
         return this._layout[this.currentRoom.y][this.currentRoom.x]
     }
     game: GameScene

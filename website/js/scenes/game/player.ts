@@ -39,6 +39,7 @@ interface GunInventory {
 
 class Player {
     location: Coordinates
+    spawnLocation: Coordinates
     width: number
     height: number
     speed: number
@@ -73,6 +74,7 @@ class Player {
 
     constructor(x: number, y: number, game: GameScene) {
         this.location = { x: x, y: y }
+        this.spawnLocation = { x: x, y: y }
         this.width = 25
         this.height = 25
         this.speed = 0.25

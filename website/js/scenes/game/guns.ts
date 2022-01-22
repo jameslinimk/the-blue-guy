@@ -9,6 +9,7 @@ enum Ammo {
 }
 
 interface Gun {
+    id: string
     damage: number
     inaccuracy: number
     range: number
@@ -21,6 +22,7 @@ interface Gun {
 }
 
 const pistol = <Gun>{
+    id: "pistol",
     damage: 25,
     inaccuracy: 5,
     range: 500,
@@ -33,6 +35,7 @@ const pistol = <Gun>{
 }
 
 const smg = <Gun>{
+    id: "smg",
     damage: 2,
     inaccuracy: 5,
     range: 400,
@@ -45,6 +48,7 @@ const smg = <Gun>{
 }
 
 const ak47 = <Gun>{
+    id: "ak47",
     damage: 25,
     inaccuracy: 7,
     range: 600,
@@ -57,6 +61,7 @@ const ak47 = <Gun>{
 }
 
 const sniper = <Gun>{
+    id: "sniper",
     damage: 150,
     inaccuracy: 1,
     range: 750,
@@ -69,6 +74,7 @@ const sniper = <Gun>{
 }
 
 const shotgun = <Gun>{
+    id: "shotgun",
     damage: 15,
     inaccuracy: 25,
     range: 200,
@@ -81,6 +87,7 @@ const shotgun = <Gun>{
 }
 
 const the360 = <Gun>{
+    id: "the360",
     damage: 5,
     inaccuracy: 360,
     range: 100,
@@ -93,6 +100,14 @@ const the360 = <Gun>{
 }
 
 const guns = [pistol, smg, ak47, sniper, shotgun, the360]
+const gunKeys = {
+    pistol: pistol,
+    smg: smg,
+    ak47: ak47,
+    sniper: sniper,
+    shotgun: shotgun,
+    the360: the360
+}
 
 export {
     Ammo,
@@ -103,6 +118,7 @@ export {
     sniper,
     shotgun,
     the360,
-    guns
+    guns,
+    gunKeys
 }
 

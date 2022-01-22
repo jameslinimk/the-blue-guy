@@ -1,6 +1,7 @@
 import { Coordinates } from "./angles"
 import { GameScene } from "./scenes/game"
 import { Direction, Room, RoomType } from "./scenes/game/dungeonGenerator"
+import { gunKeys } from "./scenes/game/guns"
 import { AmmoInventory, GunInventory } from "./scenes/game/player"
 import { ShopItem, ShopRoom } from "./scenes/game/rooms/shop"
 import { Round, RoundManager } from "./scenes/game/roundManager"
@@ -8,7 +9,8 @@ import { Round, RoundManager } from "./scenes/game/roundManager"
 interface PlayerData {
     coins: number
     ammo: AmmoInventory,
-    guns: GunInventory
+    guns: GunInventory,
+    lives: number
 }
 
 interface Save {
@@ -105,31 +107,68 @@ class Cookie {
             playerData: {
                 coins: game.player.coins,
                 ammo: game.player.ammo,
-                guns: game.player.gunInventory
+                guns: game.player.gunInventory,
+                lives: game.player.lives
             },
             saveTime: Date.now()
         }))
+
+        // Send system message
+        game.systemMessages.push({
+            sentAt: performance.now(),
+            message: "Game saved!",
+            id: game.systemMessagesId
+        })
+        game.systemMessagesId += 1
+    }
+
+    private static saveToRoom(game: GameScene, save?: SaveRoundManager) {
+        if (!save) return save
+        const returnRoundManager = new RoundManager(game)
+        returnRoundManager.rounds = save.rounds
+        return returnRoundManager
+    }
+
+    private static saveToShop(game: GameScene, shop?: SaveShopRoom) {
+        if (!shop) return shop
+        return new ShopRoom(shop.items, game)
     }
 
     static load(game: GameScene) {
-        if (!this.get("save")) return null
+        if (!this.get("save")) return
 
         const _save = JSON.parse(this.get("save"))
 
         // CHECKING SAVE
-        if (Object.keys(_save).sort().join(",") !== ["layout", "location", "playerData", "saveTime"].sort().join(",")) Cookie.remove("save")
-        if (Object.keys(_save.playerData).sort().join(",") !== ["coins", "ammo", "guns"].sort().join(",")) Cookie.remove("save")
+        if (Object.keys(_save).sort().join(",") !== ["layout", "location", "playerData", "saveTime"].sort().join(",")) return Cookie.remove("save")
+        if (Object.keys(_save.playerData).sort().join(",") !== ["coins", "ammo", "guns", "lives"].sort().join(",")) return Cookie.remove("save")
         const save = <Save>_save
 
         // Confirming
-        const confirm = prompt("A local save was found! Load by typing \"y\", else type anything")
-        if (confirm.toLocaleLowerCase() !== "y") return
+        const confirm = prompt(`A local save was found! Load by typing "y", else type anything. Save file time: ${new Date(save.saveTime).toLocaleString()}`)
+        if (!confirm || confirm.toLocaleLowerCase() !== "y") return
 
-        // Confirmed
+        /* -------------------------------- Confirmed ------------------------------- */
+        // Layout
         game.dungeonManager.layout = save.layout.map(row => row.map(room => {
             if (room === "0") return room
-            // TODO Work from here. (Check if shop or dungeon then convert and add default values)
+            return <Room>{ ...room, dungeonRounds: this.saveToRoom(game, room.dungeonRounds), shopRoom: this.saveToShop(game, room.shopRoom) }
         }))
+
+        // Player
+        game.player.coins = save.playerData.coins
+        game.player.ammo = save.playerData.ammo
+        game.player.gunInventory = save.playerData.guns
+        Object.keys(game.player.gunInventory).forEach(key => {
+            game.player.gunInventory[key] = (gunKeys[key]) ? gunKeys[key] : null
+        })
+        game.player.lives = save.playerData.lives
+
+        // Reset game
+        game.bullets = []
+        game.balls = []
+        game.rays = []
+        game.enemies = []
     }
 }
 

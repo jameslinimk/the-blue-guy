@@ -1,4 +1,5 @@
 import { config } from "../../config"
+import { Cookie } from "../../cookies"
 import { Events, KeyDownEvent } from "../../game"
 import { GameScene } from "../game"
 import { Direction, Room, spaceCharacter } from "./dungeonGenerator"
@@ -128,8 +129,10 @@ class Map {
         if (room?.discovered === false) (<Room>this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y + vspd][this.game.dungeonManager.currentRoom.x + hspd]).discovered = true
 
         if (room?.type === "dungeon" && room?.dungeonRounds?.cleared === false) {
+            Cookie.save(this.game)
             setTimeout(() => {
                 (<Room>this.game.dungeonManager.layout[this.game.dungeonManager.currentRoom.y][this.game.dungeonManager.currentRoom.x]).dungeonRounds.active = true
+                this.game.player.location = this.game.player.spawnLocation
                 this.mapNavigator = false
             }, 1000)
         }
