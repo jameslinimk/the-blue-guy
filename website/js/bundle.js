@@ -157,6 +157,7 @@ exports.Cookie = void 0;
 const guns_1 = require("./scenes/game/guns");
 const shop_1 = require("./scenes/game/rooms/shop");
 const roundManager_1 = require("./scenes/game/roundManager");
+const sound_1 = require("./sound");
 class Cookie {
     /**
      * Checks wether or not the browser supports localStorage
@@ -278,8 +279,9 @@ class Cookie {
     }
 }
 exports.Cookie = Cookie;
+sound_1.volume.volume = (!Cookie.get("volume")) ? 1 : parseFloat(Cookie.get("volume"));
 
-},{"./scenes/game/guns":17,"./scenes/game/rooms/shop":20,"./scenes/game/roundManager":21}],6:[function(require,module,exports){
+},{"./scenes/game/guns":17,"./scenes/game/rooms/shop":20,"./scenes/game/roundManager":21,"./sound":24}],6:[function(require,module,exports){
 "use strict";
 // Key keeper
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -568,6 +570,7 @@ class GameScene extends game_1.BaseScene {
     dummyImage;
     volUp;
     volDown;
+    volMute;
     /* -------------------------------- Inventory ------------------------------- */
     showInventory;
     showInventoryX;
@@ -620,6 +623,7 @@ class GameScene extends game_1.BaseScene {
         this.dummyImage = new image_1.CustomImage('./images/skins/dummy.png');
         this.volUp = new image_1.CustomImage("./images/hud/volUp.png");
         this.volDown = new image_1.CustomImage("./images/hud/volDown.png");
+        this.volMute = new image_1.CustomImage("./images/hud/volMute.png");
         this.showInventory = false;
         this.showInventoryX = config_1.config.width - hud_1.margin;
         this.showInventoryAnimation = new animations_1.CustomAnimation(250, 64, (movePerFrame) => {
@@ -1885,6 +1889,7 @@ class Map {
         this.game.bullets = [];
         this.game.balls = [];
         this.game.rays = [];
+        this.game.player.location = this.game.player.spawnLocation;
         this.game.dungeonManager.currentRoom.x += hspd;
         this.game.dungeonManager.currentRoom.y += vspd;
     }
@@ -2164,39 +2169,44 @@ class ShopRoom {
         events.filter(event => event.eventType === "KeyUp" && (event.key === "e" || event.key === "E")).forEach(event => {
         });
     }
+    getShopImage(index) {
+        /* ---------------------------- Setting the image --------------------------- */
+        let image;
+        const item = this.items[index];
+        if (item.item.type === "health") {
+            image = this.game.healthImage.image;
+        }
+        else if (item.item.type === "coins") {
+            image = this.game.coinsImage.image;
+        }
+        else if (typeof item.item.type.damage !== "undefined") {
+            image = item.item.type.image.image;
+        }
+        else {
+            switch (item.item.type) {
+                case guns_1.Ammo.small:
+                    image = this.game.smallAmmoImage.image;
+                    break;
+                case guns_1.Ammo.medium:
+                    image = this.game.mediumAmmoImage.image;
+                    break;
+                case guns_1.Ammo.large:
+                    image = this.game.largeAmmoImage.image;
+                    break;
+                case guns_1.Ammo.shell:
+                    image = this.game.shellsAmmoImage.image;
+                    break;
+            }
+        }
+        return image;
+    }
     draw() {
         let totalWidth = 0;
         for (let i = 0; i < this.items.length; i++)
             totalWidth += 50 * i + 10 * i;
         for (let i = 0; i < this.items.length; i++) {
             /* ---------------------------- Setting the image --------------------------- */
-            let image;
-            const item = this.items[i];
-            if (item.item.type === "health") {
-                image = this.game.healthImage.image;
-            }
-            else if (item.item.type === "coins") {
-                image = this.game.coinsImage.image;
-            }
-            else if (typeof item.item.type.damage !== "undefined") {
-                image = item.item.type.image.image;
-            }
-            else {
-                switch (item.item.type) {
-                    case guns_1.Ammo.small:
-                        image = this.game.smallAmmoImage.image;
-                        break;
-                    case guns_1.Ammo.medium:
-                        image = this.game.mediumAmmoImage.image;
-                        break;
-                    case guns_1.Ammo.large:
-                        image = this.game.largeAmmoImage.image;
-                        break;
-                    case guns_1.Ammo.shell:
-                        image = this.game.shellsAmmoImage.image;
-                        break;
-                }
-            }
+            const image = this.getShopImage(i);
             /* ------------------------------- Background ------------------------------- */
             this.game.ctx.fillStyle = "#049301";
             this.game.ctx.fillRect((config_1.config.width / 2 + 50 * i + 10 * i) - totalWidth / 2, 200, 50, 50);
@@ -2275,6 +2285,7 @@ class DungeonManager {
                     break;
                 case "shop":
                     this.currentRoomObject.shopRoom.draw();
+                    this.game.bullets.forEach(bullet => bullet.draw());
                     break;
             }
         }
@@ -2400,12 +2411,15 @@ class Hud {
         this.game = game;
     }
     processInput(events) {
-        events.filter(event => event.eventType === "MouseDown" && event.raw.button === 0).forEach(event => {
+        events.filter(event => event.eventType === "MouseDown" && event.raw.button === 0).forEach(() => {
             if ((0, collision_1.pointTouches)((0, collision_1.xywdToCollisionRectTopLeft)(config_1.config.width / 2 - 500 / 2 + 10 * 2 + this.game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40, 32, 32), this.game.mouse)) {
                 sound_1.volume.volume += 0.1;
             }
             else if ((0, collision_1.pointTouches)((0, collision_1.xywdToCollisionRectTopLeft)(config_1.config.width / 2 - 500 / 2 + 10 * 3 + 32 + this.game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40, 32, 32), this.game.mouse)) {
                 sound_1.volume.volume -= 0.1;
+            }
+            else if ((0, collision_1.pointTouches)((0, collision_1.xywdToCollisionRectTopLeft)(config_1.config.width / 2 - 500 / 2 + 10 * 4 + 32 * 2 + this.game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40, 32, 32), this.game.mouse)) {
+                sound_1.volume.volume = (sound_1.volume.volume === 0) ? 1 : 0;
             }
         });
     }
@@ -2417,6 +2431,7 @@ class Hud {
         this.game.ctx.fillText("Pause menu", config_1.config.width / 2 - this.game.ctx.measureText("Pause menu").width / 2, config_1.config.height / 2 - 500 / 2 + 30);
         this.game.ctx.drawImage(this.game.volUp.image, config_1.config.width / 2 - 500 / 2 + 10 * 2 + this.game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40);
         this.game.ctx.drawImage(this.game.volDown.image, config_1.config.width / 2 - 500 / 2 + 10 * 3 + 32 + this.game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40);
+        this.game.ctx.drawImage(this.game.volMute.image, config_1.config.width / 2 - 500 / 2 + 10 * 4 + 32 * 2 + this.game.ctx.measureText(`Volume: ${sound_1.volume.volume * 100}/100`).width, config_1.config.height / 2 - 500 / 2 + 40);
         this.game.ctx.fillText(`Volume: ${sound_1.volume.volume * 100}/100`, config_1.config.width / 2 - 500 / 2 + 10, config_1.config.height / 2 - 500 / 2 + 40 + 32 / 2 + 5);
     }
     drawInventoryGunSlot(number, gun) {
@@ -2495,7 +2510,7 @@ class Hud {
         if (removedMessages.length > 0)
             this.game.systemMessages = this.game.systemMessages.filter(msg => !removedMessages.includes(msg.id));
         this.game.ctx.shadowBlur = 0;
-        if (this.game.paused)
+        if (this.game.paused && !this.game.map.mapNavigator)
             this.drawPauseMenu();
         /* ------------------------------ Custom cursor ----------------------------- */
         this.game.ctx.shadowBlur = 4;
@@ -2521,7 +2536,8 @@ const angles_1 = require("../angles");
 const bullet_1 = require("./game/bullet");
 function shooting(game) {
     if (game.player.ammo[game.player.gun.ammo] > 0) {
-        game.player.ammo[game.player.gun.ammo] = game.player.ammo[game.player.gun.ammo] - 1;
+        if (game.dungeonManager.currentRoomObject?.type === "dungeon")
+            game.player.ammo[game.player.gun.ammo] = game.player.ammo[game.player.gun.ammo] - 1;
         const angle = (0, angles_1.getAngle)(game.player.location, game.mouse);
         game.player.gun.sound.clonePlay();
         for (let i = 0; i < game.player.gun.bullets; i++) {
@@ -2552,7 +2568,7 @@ class SoundVolume {
         this._volume = newVolume;
     }
     constructor() {
-        this._volume = (!cookies_1.Cookie?.get("volume")) ? 1 : parseFloat(cookies_1.Cookie.get("volume"));
+        this._volume = 1;
     }
 }
 const volume = new SoundVolume();

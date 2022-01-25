@@ -5,6 +5,7 @@ import { gunKeys } from "./scenes/game/guns"
 import { AmmoInventory, GunInventory } from "./scenes/game/player"
 import { ShopItem, ShopRoom } from "./scenes/game/rooms/shop"
 import { Round, RoundManager } from "./scenes/game/roundManager"
+import { volume } from "./sound"
 
 interface PlayerData {
     coins: number
@@ -171,6 +172,8 @@ class Cookie {
         game.enemies = []
     }
 }
+
+volume.volume = (!Cookie.get("volume")) ? 1 : parseFloat(Cookie.get("volume"))
 
 export {
     Cookie

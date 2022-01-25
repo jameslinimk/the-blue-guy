@@ -11,7 +11,7 @@ class SoundVolume {
     }
 
     constructor() {
-        this._volume = (!Cookie?.get("volume")) ? 1 : parseFloat(Cookie.get("volume"))
+        this._volume = 1
     }
 }
 const volume = new SoundVolume()

@@ -64,6 +64,7 @@ class GameScene extends BaseScene {
     dummyImage: CustomImage
     volUp: CustomImage
     volDown: CustomImage
+    volMute: CustomImage
 
     /* -------------------------------- Inventory ------------------------------- */
     showInventory: boolean
@@ -125,6 +126,7 @@ class GameScene extends BaseScene {
         this.dummyImage = new CustomImage('./images/skins/dummy.png')
         this.volUp = new CustomImage("./images/hud/volUp.png")
         this.volDown = new CustomImage("./images/hud/volDown.png")
+        this.volMute = new CustomImage("./images/hud/volMute.png")
 
         this.showInventory = false
         this.showInventoryX = config.width - margin

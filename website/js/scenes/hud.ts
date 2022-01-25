@@ -22,11 +22,13 @@ class Hud {
     }
 
     processInput(events: Events) {
-        events.filter(event => event.eventType === "MouseDown" && (<MouseDownEvent>event).raw.button === 0).forEach(event => {
+        events.filter(event => event.eventType === "MouseDown" && (<MouseDownEvent>event).raw.button === 0).forEach(() => {
             if (pointTouches(xywdToCollisionRectTopLeft(config.width / 2 - 500 / 2 + 10 * 2 + this.game.ctx.measureText(`Volume: ${volume.volume * 100}/100`).width, config.height / 2 - 500 / 2 + 40, 32, 32), this.game.mouse)) {
                 volume.volume += 0.1
             } else if (pointTouches(xywdToCollisionRectTopLeft(config.width / 2 - 500 / 2 + 10 * 3 + 32 + this.game.ctx.measureText(`Volume: ${volume.volume * 100}/100`).width, config.height / 2 - 500 / 2 + 40, 32, 32), this.game.mouse)) {
                 volume.volume -= 0.1
+            } else if (pointTouches(xywdToCollisionRectTopLeft(config.width / 2 - 500 / 2 + 10 * 4 + 32 * 2 + this.game.ctx.measureText(`Volume: ${volume.volume * 100}/100`).width, config.height / 2 - 500 / 2 + 40, 32, 32), this.game.mouse)) {
+                volume.volume = (volume.volume === 0) ? 1 : 0
             }
         })
     }
@@ -39,6 +41,7 @@ class Hud {
         this.game.ctx.fillText("Pause menu", config.width / 2 - this.game.ctx.measureText("Pause menu").width / 2, config.height / 2 - 500 / 2 + 30)
         this.game.ctx.drawImage(this.game.volUp.image, config.width / 2 - 500 / 2 + 10 * 2 + this.game.ctx.measureText(`Volume: ${volume.volume * 100}/100`).width, config.height / 2 - 500 / 2 + 40)
         this.game.ctx.drawImage(this.game.volDown.image, config.width / 2 - 500 / 2 + 10 * 3 + 32 + this.game.ctx.measureText(`Volume: ${volume.volume * 100}/100`).width, config.height / 2 - 500 / 2 + 40)
+        this.game.ctx.drawImage(this.game.volMute.image, config.width / 2 - 500 / 2 + 10 * 4 + 32 * 2 + this.game.ctx.measureText(`Volume: ${volume.volume * 100}/100`).width, config.height / 2 - 500 / 2 + 40)
         this.game.ctx.fillText(`Volume: ${volume.volume * 100}/100`, config.width / 2 - 500 / 2 + 10, config.height / 2 - 500 / 2 + 40 + 32 / 2 + 5)
     }
 
@@ -127,7 +130,7 @@ class Hud {
         if (removedMessages.length > 0) this.game.systemMessages = this.game.systemMessages.filter(msg => !removedMessages.includes(msg.id))
         this.game.ctx.shadowBlur = 0
 
-        if (this.game.paused) this.drawPauseMenu()
+        if (this.game.paused && !this.game.map.mapNavigator) this.drawPauseMenu()
 
         /* ------------------------------ Custom cursor ----------------------------- */
         this.game.ctx.shadowBlur = 4

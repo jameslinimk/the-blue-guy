@@ -29,36 +29,42 @@ class ShopRoom {
         })
     }
 
+    private getShopImage(index: number) {
+        /* ---------------------------- Setting the image --------------------------- */
+        let image: HTMLImageElement
+        const item = this.items[index]
+        if (item.item.type === "health") {
+            image = this.game.healthImage.image
+        } else if (item.item.type === "coins") {
+            image = this.game.coinsImage.image
+        } else if (typeof (<any>item.item.type).damage !== "undefined") {
+            image = (<Gun>item.item.type).image.image
+        } else {
+            switch (<Ammo>item.item.type) {
+                case Ammo.small:
+                    image = this.game.smallAmmoImage.image
+                    break
+                case Ammo.medium:
+                    image = this.game.mediumAmmoImage.image
+                    break
+                case Ammo.large:
+                    image = this.game.largeAmmoImage.image
+                    break
+                case Ammo.shell:
+                    image = this.game.shellsAmmoImage.image
+                    break
+            }
+        }
+        return image
+    }
+
     draw() {
         let totalWidth = 0
         for (let i = 0; i < this.items.length; i++) totalWidth += 50 * i + 10 * i
 
         for (let i = 0; i < this.items.length; i++) {
             /* ---------------------------- Setting the image --------------------------- */
-            let image: HTMLImageElement
-            const item = this.items[i]
-            if (item.item.type === "health") {
-                image = this.game.healthImage.image
-            } else if (item.item.type === "coins") {
-                image = this.game.coinsImage.image
-            } else if (typeof (<any>item.item.type).damage !== "undefined") {
-                image = (<Gun>item.item.type).image.image
-            } else {
-                switch (<Ammo>item.item.type) {
-                    case Ammo.small:
-                        image = this.game.smallAmmoImage.image
-                        break
-                    case Ammo.medium:
-                        image = this.game.mediumAmmoImage.image
-                        break
-                    case Ammo.large:
-                        image = this.game.largeAmmoImage.image
-                        break
-                    case Ammo.shell:
-                        image = this.game.shellsAmmoImage.image
-                        break
-                }
-            }
+            const image = this.getShopImage(i)
 
             /* ------------------------------- Background ------------------------------- */
             this.game.ctx.fillStyle = "#049301"

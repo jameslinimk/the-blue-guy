@@ -1,10 +1,11 @@
 import { getAngle } from "../angles"
 import { GameScene } from "./game"
 import { Bullet } from "./game/bullet"
+import { Room } from "./game/dungeonGenerator"
 
 function shooting(game: GameScene) {
     if (game.player.ammo[game.player.gun.ammo] > 0) {
-        game.player.ammo[game.player.gun.ammo] = game.player.ammo[game.player.gun.ammo] - 1
+        if ((<Room>game.dungeonManager.currentRoomObject)?.type === "dungeon") game.player.ammo[game.player.gun.ammo] = game.player.ammo[game.player.gun.ammo] - 1
 
         const angle = getAngle(game.player.location, game.mouse)
 

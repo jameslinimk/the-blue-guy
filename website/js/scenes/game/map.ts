@@ -142,6 +142,7 @@ class Map {
         this.game.balls = []
         this.game.rays = []
 
+        this.game.player.location = this.game.player.spawnLocation
         this.game.dungeonManager.currentRoom.x += hspd
         this.game.dungeonManager.currentRoom.y += vspd
     }
