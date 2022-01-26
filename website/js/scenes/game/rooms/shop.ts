@@ -13,14 +13,21 @@ class ShopRoom {
     items: ShopItem[]
     game: GameScene
     hoveredItem?: number
+    totalWidth: number
+    itemBoxLocations: number[]
 
     constructor(items: ShopItem[], game: GameScene) {
         this.items = items
         this.game = game
+
+        this.totalWidth = -10
+        for (let i = 0; i < this.items.length; i++) this.totalWidth += 50 + 10
+        this.itemBoxLocations = []
+        for (let i = 0; i < this.items.length; i++) this.itemBoxLocations[i] = (config.width / 2 + 50 * i + 10 * i) - this.totalWidth / 2
     }
 
     update() {
-
+        // TODO Hovered item
     }
 
     processInput(events: Events) {
@@ -59,8 +66,9 @@ class ShopRoom {
     }
 
     draw() {
-        let totalWidth = 0
-        for (let i = 0; i < this.items.length; i++) totalWidth += 50 * i + 10 * i
+        let totalWidth = -10
+        for (let i = 0; i < this.items.length; i++) totalWidth += 50 + 10
+        console.log(`🎁 | totalWidth`, totalWidth)
 
         for (let i = 0; i < this.items.length; i++) {
             /* ---------------------------- Setting the image --------------------------- */
@@ -68,9 +76,17 @@ class ShopRoom {
 
             /* ------------------------------- Background ------------------------------- */
             this.game.ctx.fillStyle = "#049301"
-            this.game.ctx.fillRect((config.width / 2 + 50 * i + 10 * i) - totalWidth / 2, 200, 50, 50)
-            // ctx.drawImage(this.game.frameImage.image, (config.width / 2 + 50 * i + 10 * i) - totalWidth / 2 + 16, 200 - 16, 32, 32)
-            this.game.ctx.drawImage(image, (config.width / 2 + 50 * i + 10 * i) - totalWidth / 2, 200, 32, 32)
+            this.game.ctx.shadowBlur = 10
+            this.game.ctx.shadowColor = "#000000"
+            this.game.ctx.fillRect(this.itemBoxLocations[i], 200, 50, 50)
+            this.game.ctx.shadowColor = "#FFFFFF"
+            this.game.ctx.drawImage(image, this.itemBoxLocations[i] + (50 - 32) / 2, 200 + (50 - 32) / 2, 32, 32)
+            this.game.ctx.shadowColor = "#000000"
+            this.game.ctx.fillStyle = "#FFFFFF"
+            this.game.ctx.font = "20px serif"
+            this.game.ctx.fillText(`$${this.items[i].cost}`, this.itemBoxLocations[i] + (50 - this.game.ctx.measureText(`$${this.items[i].cost}`).width) / 2, 190)
+            this.game.ctx.font = "15px serif"
+            this.game.ctx.fillText(`x${this.items[i].item.amount}`, this.itemBoxLocations[i], 211)
         }
 
         /* -------------------------------- Shop guy -------------------------------- */

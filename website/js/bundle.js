@@ -2159,11 +2159,20 @@ class ShopRoom {
     items;
     game;
     hoveredItem;
+    totalWidth;
+    itemBoxLocations;
     constructor(items, game) {
         this.items = items;
         this.game = game;
+        this.totalWidth = -10;
+        for (let i = 0; i < this.items.length; i++)
+            this.totalWidth += 50 + 10;
+        this.itemBoxLocations = [];
+        for (let i = 0; i < this.items.length; i++)
+            this.itemBoxLocations[i] = (config_1.config.width / 2 + 50 * i + 10 * i) - this.totalWidth / 2;
     }
     update() {
+        // TODO Hovered item
     }
     processInput(events) {
         events.filter(event => event.eventType === "KeyUp" && (event.key === "e" || event.key === "E")).forEach(event => {
@@ -2201,17 +2210,26 @@ class ShopRoom {
         return image;
     }
     draw() {
-        let totalWidth = 0;
+        let totalWidth = -10;
         for (let i = 0; i < this.items.length; i++)
-            totalWidth += 50 * i + 10 * i;
+            totalWidth += 50 + 10;
+        console.log(`🎁 | totalWidth`, totalWidth);
         for (let i = 0; i < this.items.length; i++) {
             /* ---------------------------- Setting the image --------------------------- */
             const image = this.getShopImage(i);
             /* ------------------------------- Background ------------------------------- */
             this.game.ctx.fillStyle = "#049301";
-            this.game.ctx.fillRect((config_1.config.width / 2 + 50 * i + 10 * i) - totalWidth / 2, 200, 50, 50);
-            // ctx.drawImage(this.game.frameImage.image, (config.width / 2 + 50 * i + 10 * i) - totalWidth / 2 + 16, 200 - 16, 32, 32)
-            this.game.ctx.drawImage(image, (config_1.config.width / 2 + 50 * i + 10 * i) - totalWidth / 2, 200, 32, 32);
+            this.game.ctx.shadowBlur = 10;
+            this.game.ctx.shadowColor = "#000000";
+            this.game.ctx.fillRect(this.itemBoxLocations[i], 200, 50, 50);
+            this.game.ctx.shadowColor = "#FFFFFF";
+            this.game.ctx.drawImage(image, this.itemBoxLocations[i] + (50 - 32) / 2, 200 + (50 - 32) / 2, 32, 32);
+            this.game.ctx.shadowColor = "#000000";
+            this.game.ctx.fillStyle = "#FFFFFF";
+            this.game.ctx.font = "20px serif";
+            this.game.ctx.fillText(`$${this.items[i].cost}`, this.itemBoxLocations[i] + (50 - this.game.ctx.measureText(`$${this.items[i].cost}`).width) / 2, 190);
+            this.game.ctx.font = "15px serif";
+            this.game.ctx.fillText(`x${this.items[i].item.amount}`, this.itemBoxLocations[i], 211);
         }
         /* -------------------------------- Shop guy -------------------------------- */
         this.game.ctx.drawImage(this.game.shopGuyImage.image, (config_1.config.width / 2 + 50 * this.items.length + 10 * this.items.length) - totalWidth / 2 + 32, 200 - 32);
@@ -2232,6 +2250,7 @@ const dungeonGenerator_1 = require("./dungeonGenerator");
 const ballEnemy_1 = require("./enemies/ballEnemy");
 const rangedEnemy_1 = require("./enemies/rangedEnemy");
 const spiralEnemy_1 = require("./enemies/spiralEnemy");
+const shop_1 = require("./rooms/shop");
 class DungeonManager {
     _layout;
     get layout() { return this._layout; }
@@ -2249,11 +2268,29 @@ class DungeonManager {
     constructor(game) {
         this.game = game;
         (0, dungeonGenerator_1.fullGenerate)(game, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }, { type: "chest", count: 3 }]).then(layout => {
-            this._layout = layout;
+            // this._layout = layout
             this.currentRoom = { x: (layout.length - 1) / 2, y: (layout.length - 1) / 2 };
-            setTimeout(() => {
-                this._layout[this.currentRoom.y][this.currentRoom.x].dungeonRounds.active = true;
-            }, 1000);
+            // setTimeout(() => {
+            //     (<Room>this._layout[this.currentRoom.y][this.currentRoom.x]).dungeonRounds.active = true
+            // }, 1000)
+            this._layout = [
+                ["0", "0", "0", "0", "0", "0", "0"],
+                ["0", "0", "0", "0", "0", "0", "0"],
+                ["0", "0", "0", "0", "0", "0", "0"],
+                ["0", "0", "0", {
+                        type: "shop", shopRoom: new shop_1.ShopRoom([
+                            { item: { amount: 10, type: "health" }, cost: 50 },
+                            { item: { amount: 10, type: "coins" }, cost: 50 },
+                            { item: { amount: 10, type: "coins" }, cost: 50 },
+                            { item: { amount: 10, type: "health" }, cost: 50 },
+                            { item: { amount: 10, type: "coins" }, cost: 50 },
+                            { item: { amount: 10, type: "coins" }, cost: 50 }
+                        ], game), x: 3, y: 3, direction: [], discovered: true
+                    }, "0", "0", "0"],
+                ["0", "0", "0", "0", "0", "0", "0"],
+                ["0", "0", "0", "0", "0", "0", "0"],
+                ["0", "0", "0", "0", "0", "0", "0"],
+            ];
         });
     }
     update(dt) {
@@ -2394,7 +2431,7 @@ class RoundManager {
 }
 exports.RoundManager = RoundManager;
 
-},{"../../config":4,"../game":9,"./crate":11,"./dungeonGenerator":12,"./enemies/ballEnemy":13,"./enemies/rangedEnemy":15,"./enemies/spiralEnemy":16}],22:[function(require,module,exports){
+},{"../../config":4,"../game":9,"./crate":11,"./dungeonGenerator":12,"./enemies/ballEnemy":13,"./enemies/rangedEnemy":15,"./enemies/spiralEnemy":16,"./rooms/shop":20}],22:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.margin = exports.Hud = void 0;

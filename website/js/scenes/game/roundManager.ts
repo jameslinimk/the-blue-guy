@@ -2,11 +2,12 @@ import { Coordinates } from "../../angles"
 import { config } from "../../config"
 import { clamp, GameScene, random } from "../game"
 import { Crate } from "./crate"
-import { fullGenerate, Layout, Room } from "./dungeonGenerator"
+import { fullGenerate, Layout } from "./dungeonGenerator"
 import { BallEnemy } from "./enemies/ballEnemy"
 import { EnemyType } from "./enemies/enemy"
 import { RangedEnemy } from "./enemies/rangedEnemy"
 import { SpiralEnemy } from "./enemies/spiralEnemy"
+import { ShopRoom } from "./rooms/shop"
 
 class DungeonManager {
     private _layout?: Layout
@@ -25,11 +26,30 @@ class DungeonManager {
     constructor(game: GameScene) {
         this.game = game
         fullGenerate(game, { layoutSize: 7, rooms: 20 }, [{ type: "shop", count: 5 }, { type: "chest", count: 3 }]).then(layout => {
-            this._layout = layout
+            // this._layout = layout
             this.currentRoom = { x: (layout.length - 1) / 2, y: (layout.length - 1) / 2 }
-            setTimeout(() => {
-                (<Room>this._layout[this.currentRoom.y][this.currentRoom.x]).dungeonRounds.active = true
-            }, 1000)
+            // setTimeout(() => {
+            //     (<Room>this._layout[this.currentRoom.y][this.currentRoom.x]).dungeonRounds.active = true
+            // }, 1000)
+
+            this._layout = <Layout>[
+                ["0", "0", "0", "0", "0", "0", "0"],
+                ["0", "0", "0", "0", "0", "0", "0"],
+                ["0", "0", "0", "0", "0", "0", "0"],
+                ["0", "0", "0", {
+                    type: "shop", shopRoom: new ShopRoom([
+                        { item: { amount: 10, type: "health" }, cost: 50 },
+                        { item: { amount: 10, type: "coins" }, cost: 50 },
+                        { item: { amount: 10, type: "coins" }, cost: 50 },
+                        { item: { amount: 10, type: "health" }, cost: 50 },
+                        { item: { amount: 10, type: "coins" }, cost: 50 },
+                        { item: { amount: 10, type: "coins" }, cost: 50 }
+                    ], game), x: 3, y: 3, direction: [], discovered: true
+                }, "0", "0", "0"],
+                ["0", "0", "0", "0", "0", "0", "0"],
+                ["0", "0", "0", "0", "0", "0", "0"],
+                ["0", "0", "0", "0", "0", "0", "0"],
+            ]
         })
     }
 
